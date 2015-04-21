@@ -1,10 +1,10 @@
-package org.walkmod.cleanddeadcode.visitors;
+package org.walkmod.deadcodecleaner.visitors;
 
 import og.walkmod.javalang.test.SemanticTest;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.walkmod.cleandeadcode.visitors.CleanDeadDeclarationsVisitor;
+import org.walkmod.deadcodecleaner.visitors.CleanDeadDeclarationsVisitor;
 import org.walkmod.javalang.ast.CompilationUnit;
 import org.walkmod.javalang.ast.body.MethodDeclaration;
 

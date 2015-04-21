@@ -1,4 +1,4 @@
-package org.walkmod.cleandeadcode.visitors;
+package org.walkmod.deadcodecleaner.visitors;
 
 import java.util.Iterator;
 import java.util.List;
