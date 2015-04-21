@@ -1,5 +1,5 @@
 walkmod-dead-code-cleaner-plugin
-==============================
+================================
 Raquel Pau <raquelpau@gmail.com>
 
 This is a walkmod plugin to remove unused declarations (imports, variables and private fields, methods and types) in Java source files. 
@@ -16,15 +16,13 @@ package example;
 import java.util.*;
 
 public class Foo{
-
-	private void hello(File file){
-		...
-	}
-	
-	public void goodBye(){
-		String s="bye";
-		System.out.println("bye");
-	}
+  private void hello(File file){
+    ...
+  }
+  public void goodBye(){
+    String s="bye";
+    System.out.println("bye");
+  }
 }
 ```
 
@@ -33,10 +31,9 @@ What this plugins generates is the following modified code:
 package example;
 
 public class Foo{
-
-	public void goodBye(){
-		System.out.println("bye");
-	}
+  public void goodBye(){
+    System.out.println("bye");
+  }
 }
 ```
 
