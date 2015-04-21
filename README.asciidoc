@@ -1,0 +1,83 @@
+walkmod-dead-code-cleaner-plugin
+==============================
+Raquel Pau <raquelpau@gmail.com>
+
+This is a walkmod plugin to remove unused declarations (imports, variables and private fields, methods and types) in Java source files. 
+It applies the clean procedure in cascade. For example, if a unused method uses some types that are just used in this method, the imports 
+related to these types are also removed.
+
+== Example
+Let's see an example. Take a look to this code. There is a private method called `hello` that is never referenced and 
+also a variable in the `goodBye`method that also is never used. 
+
+```java
+package example;
+
+import java.util.*;
+
+public class Foo{
+
+	private void hello(File file){
+		...
+	}
+	
+	public void goodBye(){
+		String s="bye";
+		System.out.println("bye");
+	}
+}
+```
+
+What this plugins generates is the following modified code:
+```java
+package example;
+
+public class Foo{
+
+	public void goodBye(){
+		System.out.println("bye");
+	}
+}
+```
+
+== Usage
+
+. Add the https://github.com/rpau/walkmod-maven-plugin[walkmod-maven-plugin] into your `walkmod.xml` as a plugin. 
+This plugin will interpret your classpath accoding your `pom.xml` and will compile your code.
+
+. Add https://github.com/rpau/walkmod-dead-code-cleaner-plugin[walkmod-dead-code-cleaner-plugin] into your `walkmod.xml` as a plugin.
+
+. Add the transformations `walkmod:commons:unused-declarations-cleaner` into your  `walkmod.xml` and 
+set your refactoring configurations.
+
+```XML
+<!DOCTYPE walkmod PUBLIC "-//WALKMOD//DTD"  "http://www.walkmod.com/dtd/walkmod-1.0.dtd" >
+<walkmod>
+  <plugins>
+    <plugin groupId="org.walkmod" artifactId="walkmod-maven-plugin" version="1.0" />
+    <plugin groupId="org.walkmod" artifactId="walkmod-dead-code-cleaner-plugin" version="1.0" />
+  </plugins>
+  <conf-providers>
+    <conf-provider type="walkmod:commons:maven"></conf-provider>
+  </conf-providers>
+  <chain name="main-chain">	
+    <transformation type="walkmod:commons:unused-declarations-cleaner"/>
+  </chain>	
+</walkmod>
+```
+
+You can apply walkmod-imports-cleaner-plugin via walkmod. 
+
+  $ walkmod apply
+
+Or, you can also check which would be the modified classes typing:
+
+  $ walkmod check
+
+== Contributing
+
+If you want to hack on this, fork it, improve it and send me a pull request.
+
+To get started using it, just clone it and call mvn install. 
+
+
