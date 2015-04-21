@@ -8,7 +8,7 @@ related to these types are also removed.
 
 == Example
 Let's see an example. Take a look to this code. There is a private method called `hello` that is never referenced and 
-also a variable in the `goodBye`method that also is never used. 
+also a variable in the `goodBye` method that also is never used. 
 
 ```java
 package example;
