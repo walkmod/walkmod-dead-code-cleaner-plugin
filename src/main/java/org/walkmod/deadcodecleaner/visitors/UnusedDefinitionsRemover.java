@@ -75,20 +75,18 @@ public class UnusedDefinitionsRemover extends
 	}
 
 	public Boolean visit(EnumDeclaration n, Iterator<? extends Node> it) {
-		if(siblingsVisitor.getRemoveUnusedEnumerations()){
+		if (siblingsVisitor.getRemoveUnusedEnumerations()) {
 			return visitTypeDeclaration(n, it);
-		}
-		else{
+		} else {
 			n.accept(siblingsVisitor, null);
 			return false;
 		}
 	}
 
 	public Boolean visit(AnnotationDeclaration n, Iterator<? extends Node> it) {
-		if(siblingsVisitor.getRemoveUnusedAnnotationTypes()){
+		if (siblingsVisitor.getRemoveUnusedAnnotationTypes()) {
 			return visitTypeDeclaration(n, it);
-		}
-		else{
+		} else {
 			n.accept(siblingsVisitor, null);
 			return false;
 		}
@@ -115,7 +113,6 @@ public class UnusedDefinitionsRemover extends
 		}
 		return removed;
 	}
-	
 
 	@Override
 	public Boolean visit(FieldDeclaration n, Iterator<? extends Node> it) {

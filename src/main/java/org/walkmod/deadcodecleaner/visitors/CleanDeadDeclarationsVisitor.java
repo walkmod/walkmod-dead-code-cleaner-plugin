@@ -16,6 +16,7 @@ along with Walkmod.  If not, see <http://www.gnu.org/licenses/>.*/
 package org.walkmod.deadcodecleaner.visitors;
 
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.walkmod.javalang.ast.CompilationUnit;
@@ -32,6 +33,7 @@ import org.walkmod.javalang.ast.body.TypeDeclaration;
 import org.walkmod.javalang.ast.body.VariableDeclarator;
 import org.walkmod.javalang.ast.expr.VariableDeclarationExpr;
 import org.walkmod.javalang.ast.stmt.BlockStmt;
+import org.walkmod.javalang.ast.stmt.Statement;
 import org.walkmod.javalang.compiler.symbols.RequiresSemanticAnalysis;
 import org.walkmod.javalang.visitors.VoidVisitorAdapter;
 
@@ -124,7 +126,14 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 				}
 			}
 			if (vars.isEmpty()) {
-				n.getParentNode().getMembers().remove(n);
+				List<BodyDeclaration> list = n.getParentNode().getMembers();
+				Iterator<BodyDeclaration> itB = list.iterator();
+				while (itB.hasNext()) {
+					if (itB.next() == n) {
+						itB.remove();
+					}
+				}
+				n.getParentNode().setMembers(list);
 			}
 		}
 	}
@@ -143,10 +152,18 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 					if (parentNode != null) {
 						Node stmt = parentNode.getParentNode();
 						if (stmt instanceof BlockStmt) {
-							if (vars.isEmpty()) {
-								BlockStmt block = (BlockStmt) stmt;
-								block.getStmts().remove(parentNode);
+
+							BlockStmt block = (BlockStmt) stmt;
+							List<Statement> list = new LinkedList<Statement>(
+									block.getStmts());
+							Iterator<Statement> it2 = list.iterator();
+							while (it2.hasNext()) {
+								if (it2.next() == parentNode) {
+									it2.remove();
+								}
 							}
+							block.setStmts(list);
+
 						}
 					}
 				}
