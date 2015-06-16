@@ -15,13 +15,12 @@ You should have received a copy of the GNU Lesser General Public License
 along with Walkmod.  If not, see <http://www.gnu.org/licenses/>.*/
 package org.walkmod.deadcodecleaner.visitors;
 
-import og.walkmod.javalang.test.SemanticTest;
-
 import org.junit.Assert;
 import org.junit.Test;
 import org.walkmod.deadcodecleaner.visitors.CleanDeadDeclarationsVisitor;
 import org.walkmod.javalang.ast.CompilationUnit;
 import org.walkmod.javalang.ast.body.MethodDeclaration;
+import org.walkmod.javalang.test.SemanticTest;
 
 
 public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
@@ -112,9 +111,9 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 
 	@Test
 	public void testStaticImportsWithWildcard() throws Exception {
-		CompilationUnit cu = compile("import static java.lang.Math.*; public class HelloWorld { private double compute = PI; private double foo() { return (PI * pow(2.5,2));} }");
+		CompilationUnit cu = compile("import static java.lang.Math.*; public class HelloWorld { private double compute = PI; public double foo() { return (PI * pow(2.5,2));} }");
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
-		Assert.assertTrue(cu.getTypes().get(0).getMembers().isEmpty());
+		Assert.assertTrue(!cu.getTypes().get(0).getMembers().isEmpty());
 		Assert.assertTrue(!cu.getImports().isEmpty());
 	}
 

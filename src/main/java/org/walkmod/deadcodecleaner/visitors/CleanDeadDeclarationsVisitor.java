@@ -26,11 +26,13 @@ import org.walkmod.javalang.ast.SymbolDefinition;
 import org.walkmod.javalang.ast.body.AnnotationDeclaration;
 import org.walkmod.javalang.ast.body.BodyDeclaration;
 import org.walkmod.javalang.ast.body.ClassOrInterfaceDeclaration;
+import org.walkmod.javalang.ast.body.EnumConstantDeclaration;
 import org.walkmod.javalang.ast.body.EnumDeclaration;
 import org.walkmod.javalang.ast.body.FieldDeclaration;
 import org.walkmod.javalang.ast.body.ModifierSet;
 import org.walkmod.javalang.ast.body.TypeDeclaration;
 import org.walkmod.javalang.ast.body.VariableDeclarator;
+import org.walkmod.javalang.ast.expr.ObjectCreationExpr;
 import org.walkmod.javalang.ast.expr.VariableDeclarationExpr;
 import org.walkmod.javalang.ast.stmt.BlockStmt;
 import org.walkmod.javalang.ast.stmt.Statement;
@@ -95,15 +97,20 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 		List<BodyDeclaration> members = n.getMembers();
 		if (members != null) {
 			Iterator<BodyDeclaration> it = members.iterator();
+
 			while (it.hasNext()) {
 				BodyDeclaration current = it.next();
+				int size = members.size();
 				if (current instanceof SymbolDefinition) {
-
 					current.accept(remover, it);
 
 				} else {
 					current.accept(this, arg);
 				}
+				if (members.size() != size) {
+					it = members.iterator();
+				}
+
 			}
 		}
 	}
@@ -126,14 +133,24 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 				}
 			}
 			if (vars.isEmpty()) {
-				List<BodyDeclaration> list = n.getParentNode().getMembers();
+				Node parent = n.getParentNode();
+				List<BodyDeclaration> list = null;
+				if (parent instanceof TypeDeclaration) {
+					list = ((TypeDeclaration) parent).getMembers();
+				} else if (parent instanceof ObjectCreationExpr) {
+					list = ((ObjectCreationExpr) parent)
+							.getAnonymousClassBody();
+				} else if (parent instanceof EnumConstantDeclaration) {
+					list = ((EnumConstantDeclaration) parent).getClassBody();
+				}
 				Iterator<BodyDeclaration> itB = list.iterator();
 				while (itB.hasNext()) {
 					if (itB.next() == n) {
 						itB.remove();
 					}
 				}
-				n.getParentNode().setMembers(list);
+				parent.accept(this, arg);
+
 			}
 		}
 	}
