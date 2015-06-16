@@ -32,6 +32,13 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertTrue(cu.getTypes().get(0).getMembers().isEmpty());
 	}
+	
+	@Test
+	public void testRemoveUnusedAnnotatedMethods() throws Exception {
+		CompilationUnit cu = compile("public class Foo { @SuppressWarnings(\"unused\")private void bar(){} }");
+		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+		Assert.assertTrue(!cu.getTypes().get(0).getMembers().isEmpty());
+	}
 
 	@Test
 	public void testRemoveUnusedMethods1() throws Exception {
@@ -76,6 +83,13 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertTrue(cu.getTypes().get(0).getMembers().isEmpty());
 	}
+	
+	@Test
+	public void testRemoveUnusedAnnotatedFields() throws Exception {
+		CompilationUnit cu = compile("public class Foo {  @SuppressWarnings(\"unused\") private String bar; }");
+		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+		Assert.assertTrue(!cu.getTypes().get(0).getMembers().isEmpty());
+	}
 
 	@Test
 	public void testRemoveUnusedFields1() throws Exception {
@@ -90,6 +104,13 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertTrue(cu.getTypes().get(0).getMembers().isEmpty());
 	}
+	
+	@Test
+	public void testRemoveUnusedAnnotatedTypes() throws Exception {
+		CompilationUnit cu = compile("public class Foo { @SuppressWarnings(\"unused\") private class Bar{} }");
+		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+		Assert.assertTrue(!cu.getTypes().get(0).getMembers().isEmpty());
+	}
 
 	@Test
 	public void testRemoveUnusedVariables() throws Exception {
@@ -98,6 +119,16 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		MethodDeclaration md = (MethodDeclaration) cu.getTypes().get(0)
 				.getMembers().get(0);
 		Assert.assertTrue(md.getBody().getStmts().isEmpty());
+
+	}
+	
+	@Test
+	public void testRemoveUnusedVariables2() throws Exception {
+		CompilationUnit cu = compile("public class Foo { public void bar(){ @SuppressWarnings({\"UnusedDeclaration\", \"unused\"}) int i;} }");
+		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+		MethodDeclaration md = (MethodDeclaration) cu.getTypes().get(0)
+				.getMembers().get(0);
+		Assert.assertTrue(!md.getBody().getStmts().isEmpty());
 
 	}
 

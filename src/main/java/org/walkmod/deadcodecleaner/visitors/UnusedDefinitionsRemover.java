@@ -41,7 +41,16 @@ import org.walkmod.javalang.ast.body.ModifierSet;
 import org.walkmod.javalang.ast.body.Parameter;
 import org.walkmod.javalang.ast.body.TypeDeclaration;
 import org.walkmod.javalang.ast.body.VariableDeclarator;
+import org.walkmod.javalang.ast.expr.AnnotationExpr;
+import org.walkmod.javalang.ast.expr.ArrayInitializerExpr;
+import org.walkmod.javalang.ast.expr.Expression;
+import org.walkmod.javalang.ast.expr.MarkerAnnotationExpr;
+import org.walkmod.javalang.ast.expr.MemberValuePair;
 import org.walkmod.javalang.ast.expr.MethodCallExpr;
+import org.walkmod.javalang.ast.expr.NormalAnnotationExpr;
+import org.walkmod.javalang.ast.expr.SingleMemberAnnotationExpr;
+import org.walkmod.javalang.ast.expr.StringLiteralExpr;
+import org.walkmod.javalang.ast.expr.VariableDeclarationExpr;
 import org.walkmod.javalang.visitors.GenericVisitorAdapter;
 import org.walkmod.javalang.visitors.VoidVisitorAdapter;
 
@@ -61,10 +70,16 @@ public class UnusedDefinitionsRemover extends
 		if (ModifierSet.isPrivate(n.getModifiers())) {
 			List<SymbolReference> usages = n.getUsages();
 			if (usages == null || usages.isEmpty()) {
-
-				it.remove();
-				removed = true;
-				removeOrphanBodyReferences(it, n);
+				HasSupressWarning warning = new HasSupressWarning();
+				Boolean containsSupressWarnings = n.accept(warning, null);
+				if (containsSupressWarnings == null) {
+					containsSupressWarnings = false;
+				}
+				if (!containsSupressWarnings) {
+					it.remove();
+					removed = true;
+					removeOrphanBodyReferences(it, n);
+				}
 			} else {
 				n.accept(siblingsVisitor, null);
 			}
@@ -114,13 +129,20 @@ public class UnusedDefinitionsRemover extends
 				&& ModifierSet.isPrivate(n.getModifiers())) {
 			List<SymbolReference> usages = n.getUsages();
 			if (usages == null || usages.isEmpty()) {
-				boolean belongsToSerializableOrExternalizable = belongsToClass(n, Serializable.class);
+				boolean belongsToSerializableOrExternalizable = belongsToClass(
+						n, Serializable.class);
 				boolean containsAnSerializableMethod = false;
+				HasSupressWarning warning = new HasSupressWarning();
+				Boolean containsSupressWarnings = n.accept(warning, null);
+				if (containsSupressWarnings == null) {
+					containsSupressWarnings = false;
+				}
 				if (belongsToSerializableOrExternalizable) {
 					String name = n.getName();
 					List<Parameter> params = n.getParameters();
-					if ((name.equals("readResolve") || name
-							.equals("readObjectNoData") || name.equals("writeReplace"))
+					if ((name.equals("readResolve")
+							|| name.equals("readObjectNoData") || name
+								.equals("writeReplace"))
 							&& (params == null || params.isEmpty())) {
 						containsAnSerializableMethod = true;
 					} else if (name.equals("readObject") && params != null
@@ -130,27 +152,27 @@ public class UnusedDefinitionsRemover extends
 							containsAnSerializableMethod = sd.getClazz()
 									.equals(ObjectInputStream.class);
 						}
-					}
-					else if(name.equals("writeObject")&& params != null
-							&& params.size() == 1){
+					} else if (name.equals("writeObject") && params != null
+							&& params.size() == 1) {
 						SymbolData sd = params.get(0).getSymbolData();
 						if (sd != null) {
 							containsAnSerializableMethod = sd.getClazz()
 									.equals(ObjectOutputStream.class);
 						}
 					}
-				}
-				else{
-					belongsToSerializableOrExternalizable = belongsToClass(n, Externalizable.class);
+				} else {
+					belongsToSerializableOrExternalizable = belongsToClass(n,
+							Externalizable.class);
 					String name = n.getName();
 					List<Parameter> params = n.getParameters();
-					if ((name.equals("readResolve") || name.equals("writeReplace"))
+					if ((name.equals("readResolve") || name
+							.equals("writeReplace"))
 							&& (params == null || params.isEmpty())) {
 						containsAnSerializableMethod = true;
 					}
 				}
 				boolean canBeRemoved = !(belongsToSerializableOrExternalizable && containsAnSerializableMethod);
-				if (canBeRemoved) {
+				if (canBeRemoved && !containsSupressWarnings) {
 					it.remove();
 					removed = true;
 					removeOrphanBodyReferences(it, n);
@@ -170,8 +192,7 @@ public class UnusedDefinitionsRemover extends
 		if (grandparent instanceof SymbolDataAware<?>) {
 			SymbolData sd = ((SymbolDataAware<?>) grandparent).getSymbolData();
 			if (sd != null) {
-				belongsToSerializable = clazz.isAssignableFrom(sd
-						.getClazz());
+				belongsToSerializable = clazz.isAssignableFrom(sd.getClazz());
 			}
 		}
 		return belongsToSerializable;
@@ -184,8 +205,14 @@ public class UnusedDefinitionsRemover extends
 				&& ModifierSet.isPrivate(n.getModifiers())) {
 			List<SymbolReference> usages = n.getUsages();
 			if (usages == null || usages.isEmpty()) {
-				boolean belongsToSerializable = belongsToClass(n, Serializable.class);
+				boolean belongsToSerializable = belongsToClass(n,
+						Serializable.class);
 				boolean hasSerialVersionUID = false;
+				HasSupressWarning warning = new HasSupressWarning();
+				Boolean containsSupressWarnings = n.accept(warning, null);
+				if (containsSupressWarnings == null) {
+					containsSupressWarnings = false;
+				}
 				List<VariableDeclarator> vds = n.getVariables();
 				if (vds != null) {
 					Iterator<VariableDeclarator> itV = vds.iterator();
@@ -196,7 +223,7 @@ public class UnusedDefinitionsRemover extends
 					}
 				}
 				boolean canBeRemoved = !(belongsToSerializable && hasSerialVersionUID);
-				if (canBeRemoved) {
+				if (canBeRemoved && !containsSupressWarnings) {
 					it.remove();
 					removeOrphanBodyReferences(it, n);
 					removed = true;
@@ -226,6 +253,188 @@ public class UnusedDefinitionsRemover extends
 		return removed;
 	}
 
+	class HasSupressWarning extends GenericVisitorAdapter<Boolean, Object> {
+
+		public HasSupressWarning() {
+
+		}
+
+		@Override
+		public Boolean visit(SingleMemberAnnotationExpr n, Object ctx) {
+			SymbolData sd = n.getSymbolData();
+			if (sd != null) {
+				if (SuppressWarnings.class.isAssignableFrom(sd.getClazz())) {
+					Boolean hasTheUnUnusedValue = n.getMemberValue().accept(
+							this, ctx);
+					if (hasTheUnUnusedValue != null) {
+						return hasTheUnUnusedValue;
+					} else {
+						return false;
+					}
+				}
+			}
+			return false;
+		}
+
+		@Override
+		public Boolean visit(NormalAnnotationExpr n, Object ctx) {
+			SymbolData sd = n.getSymbolData();
+			if (sd != null) {
+				if (SuppressWarnings.class.isAssignableFrom(sd.getClazz())) {
+					Boolean hasTheUnUnusedValue = false;
+					List<MemberValuePair> list = n.getPairs();
+					if (list != null) {
+						Iterator<MemberValuePair> it = list.iterator();
+						while (it.hasNext() && !hasTheUnUnusedValue) {
+							MemberValuePair m = it.next();
+							Boolean aux = m.accept(this, ctx);
+							if (aux != null) {
+								hasTheUnUnusedValue = aux;
+							}
+						}
+					}
+
+					return hasTheUnUnusedValue;
+
+				}
+			}
+			return false;
+		}
+
+		@Override
+		public Boolean visit(MarkerAnnotationExpr n, Object ctx) {
+			return false;
+		}
+
+		@Override
+		public Boolean visit(StringLiteralExpr n, Object ctx) {
+			return n.getValue().equals("unused");
+		}
+
+		@Override
+		public Boolean visit(ArrayInitializerExpr n, Object arg) {
+			Boolean containsSupressWarnings = false;
+			if (n.getValues() != null) {
+				Iterator<Expression> it = n.getValues().iterator();
+				while (it.hasNext() && !containsSupressWarnings) {
+					Boolean aux = it.next().accept(this, arg);
+					if (aux != null) {
+						containsSupressWarnings = aux;
+					}
+				}
+			}
+			return containsSupressWarnings;
+		}
+
+		public Boolean visit(VariableDeclarator n, Object ctx) {
+			return n.getParentNode().accept(this, ctx);
+		}
+
+		@Override
+		public Boolean visit(VariableDeclarationExpr n, Object ctx) {
+			Boolean containsSupressWarnings = false;
+			List<AnnotationExpr> ann = n.getAnnotations();
+			if (ann != null) {
+				Iterator<AnnotationExpr> itAnnotations = ann.iterator();
+				while (itAnnotations.hasNext() && !containsSupressWarnings) {
+					AnnotationExpr annotation = itAnnotations.next();
+					if (annotation != null) {
+						Boolean aux = annotation.accept(this, null);
+						if (aux != null) {
+							containsSupressWarnings = aux;
+						}
+
+					}
+				}
+			}
+			return containsSupressWarnings;
+		}
+
+		@Override
+		public Boolean visit(FieldDeclaration n, Object ctx) {
+			boolean containsSupressWarnings = false;
+			List<AnnotationExpr> ann = n.getAnnotations();
+			if (ann != null) {
+				Iterator<AnnotationExpr> itAnnotations = ann.iterator();
+				while (itAnnotations.hasNext() && !containsSupressWarnings) {
+					AnnotationExpr annotation = itAnnotations.next();
+					containsSupressWarnings = annotation.accept(this, null);
+				}
+			}
+			return containsSupressWarnings;
+		}
+
+		@Override
+		public Boolean visit(MethodDeclaration n, Object ctx) {
+			boolean containsSupressWarnings = false;
+			List<AnnotationExpr> ann = n.getAnnotations();
+			if (ann != null) {
+				Iterator<AnnotationExpr> itAnnotations = ann.iterator();
+				while (itAnnotations.hasNext() && !containsSupressWarnings) {
+					AnnotationExpr annotation = itAnnotations.next();
+					containsSupressWarnings = annotation.accept(this, null);
+				}
+			}
+			return containsSupressWarnings;
+		}
+		
+		@Override
+		public Boolean visit(ClassOrInterfaceDeclaration n, Object ctx) {
+			boolean containsSupressWarnings = false;
+			List<AnnotationExpr> ann = n.getAnnotations();
+			if (ann != null) {
+				Iterator<AnnotationExpr> itAnnotations = ann.iterator();
+				while (itAnnotations.hasNext() && !containsSupressWarnings) {
+					AnnotationExpr annotation = itAnnotations.next();
+					containsSupressWarnings = annotation.accept(this, null);
+				}
+			}
+			return containsSupressWarnings;
+		}
+		
+		@Override
+		public Boolean visit(EnumDeclaration n, Object ctx) {
+			boolean containsSupressWarnings = false;
+			List<AnnotationExpr> ann = n.getAnnotations();
+			if (ann != null) {
+				Iterator<AnnotationExpr> itAnnotations = ann.iterator();
+				while (itAnnotations.hasNext() && !containsSupressWarnings) {
+					AnnotationExpr annotation = itAnnotations.next();
+					containsSupressWarnings = annotation.accept(this, null);
+				}
+			}
+			return containsSupressWarnings;
+		}
+		
+		@Override
+		public Boolean visit(AnnotationDeclaration n, Object ctx) {
+			boolean containsSupressWarnings = false;
+			List<AnnotationExpr> ann = n.getAnnotations();
+			if (ann != null) {
+				Iterator<AnnotationExpr> itAnnotations = ann.iterator();
+				while (itAnnotations.hasNext() && !containsSupressWarnings) {
+					AnnotationExpr annotation = itAnnotations.next();
+					containsSupressWarnings = annotation.accept(this, null);
+				}
+			}
+			return containsSupressWarnings;
+		}
+		
+		@Override
+		public Boolean visit(EmptyTypeDeclaration n, Object ctx) {
+			boolean containsSupressWarnings = false;
+			List<AnnotationExpr> ann = n.getAnnotations();
+			if (ann != null) {
+				Iterator<AnnotationExpr> itAnnotations = ann.iterator();
+				while (itAnnotations.hasNext() && !containsSupressWarnings) {
+					AnnotationExpr annotation = itAnnotations.next();
+					containsSupressWarnings = annotation.accept(this, null);
+				}
+			}
+			return containsSupressWarnings;
+		}
+	}
+
 	@Override
 	public Boolean visit(VariableDeclarator n, Iterator<? extends Node> it) {
 		boolean removed = false;
@@ -234,10 +443,16 @@ public class UnusedDefinitionsRemover extends
 				|| usages.isEmpty()) {
 			Node parent = n.getParentNode();
 			boolean belongsToSerializable = false;
+			Boolean containsSupressWarnings = false;
 			if (parent instanceof FieldDeclaration) {
-				belongsToSerializable = belongsToClass((FieldDeclaration) parent, Serializable.class);
+				belongsToSerializable = belongsToClass(
+						(FieldDeclaration) parent, Serializable.class);
 			}
-
+			HasSupressWarning warning = new HasSupressWarning();
+			containsSupressWarnings = n.accept(warning, null);
+			if (containsSupressWarnings == null) {
+				containsSupressWarnings = false;
+			}
 			boolean canBeRemoved = !(belongsToSerializable && n.getId()
 					.getName().equals("serialVersionUID"));
 			if (canBeRemoved && n.getInit() != null) {
@@ -251,7 +466,7 @@ public class UnusedDefinitionsRemover extends
 				n.getInit().accept(v, ctx);
 				canBeRemoved = ctx.isEmpty();
 			}
-			if (canBeRemoved) {
+			if (canBeRemoved && !containsSupressWarnings) {
 				it.remove();
 				removed = true;
 				removeOrphanBodyReferences(it, n);
