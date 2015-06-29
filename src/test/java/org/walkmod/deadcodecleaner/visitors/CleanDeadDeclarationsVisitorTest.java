@@ -282,6 +282,13 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		Assert.assertTrue(cu.getImports().isEmpty());
 	}
 	
+	@Test 
+	public void testSuppressWarningsOnMethods() throws Exception{
+		CompilationUnit cu = compile("public class Foo { @SuppressWarnings(\"unused\") private void foo(){} }");
+		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+		Assert.assertTrue(!cu.getTypes().get(0).getMembers().isEmpty());
+	}
+	
 	@Test
 	public void testVariableDependencies() throws Exception{
 		CompilationUnit cu = compile("public class Foo{ public int val; public void bar() { int x = 0; int y = x; val = y;}}");
