@@ -23,6 +23,7 @@ import org.walkmod.javalang.ast.CompilationUnit;
 import org.walkmod.javalang.ast.ImportDeclaration;
 import org.walkmod.javalang.ast.Node;
 import org.walkmod.javalang.ast.SymbolDefinition;
+import org.walkmod.javalang.ast.SymbolReference;
 import org.walkmod.javalang.ast.body.AnnotationDeclaration;
 import org.walkmod.javalang.ast.body.BodyDeclaration;
 import org.walkmod.javalang.ast.body.ClassOrInterfaceDeclaration;
@@ -36,6 +37,9 @@ import org.walkmod.javalang.ast.expr.ObjectCreationExpr;
 import org.walkmod.javalang.ast.expr.VariableDeclarationExpr;
 import org.walkmod.javalang.ast.stmt.BlockStmt;
 import org.walkmod.javalang.ast.stmt.Statement;
+import org.walkmod.javalang.ast.stmt.TypeDeclarationStmt;
+import org.walkmod.javalang.ast.type.ClassOrInterfaceType;
+import org.walkmod.javalang.ast.type.Type;
 import org.walkmod.javalang.compiler.symbols.RequiresSemanticAnalysis;
 import org.walkmod.javalang.visitors.VoidVisitorAdapter;
 
@@ -93,6 +97,31 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 		analyzeTypeDeclaration(n, arg);
 	}
 
+	public void visit(TypeDeclarationStmt n, T arg) {
+
+		TypeDeclaration td = n.getTypeDeclaration();
+		td.accept(this, arg);
+		List<SymbolReference> usages = td.getUsages();
+		if (usages == null || usages.isEmpty()) {
+			Node stmt = n.getParentNode();
+
+			if (stmt instanceof BlockStmt) {
+
+				BlockStmt block = (BlockStmt) stmt;
+				List<Statement> list = new LinkedList<Statement>(
+						block.getStmts());
+				Iterator<Statement> it2 = list.iterator();
+				while (it2.hasNext()) {
+					if (it2.next() == n) {
+						it2.remove();
+					}
+				}
+				block.setStmts(list);
+
+			}
+		}
+	}
+
 	public void analyzeTypeDeclaration(TypeDeclaration n, T arg) {
 		List<BodyDeclaration> members = n.getMembers();
 		if (members != null) {
@@ -144,9 +173,17 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 					list = ((EnumConstantDeclaration) parent).getClassBody();
 				}
 				Iterator<BodyDeclaration> itB = list.iterator();
+				boolean removed = false;
 				while (itB.hasNext()) {
 					if (itB.next() == n) {
 						itB.remove();
+						removed = true;
+					}
+				}
+				if (removed) {
+					Type sr = n.getType();
+					if (sr != null) {
+						sr.accept(typeUpdater, arg);
 					}
 				}
 				parent.accept(this, arg);
@@ -164,6 +201,7 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 					VariableDeclarator current = it.next();
 					current.accept(remover, it);
 				}
+
 				if (vars.isEmpty()) {
 					Node parentNode = n.getParentNode();
 					if (parentNode != null) {
@@ -174,17 +212,61 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 							List<Statement> list = new LinkedList<Statement>(
 									block.getStmts());
 							Iterator<Statement> it2 = list.iterator();
+							boolean removed = false;
 							while (it2.hasNext()) {
 								if (it2.next() == parentNode) {
 									it2.remove();
+									removed = true;
 								}
 							}
 							block.setStmts(list);
-
+							if (removed) {
+								Type sr = n.getType();
+								if (sr != null) {
+									sr.accept(typeUpdater, arg);
+								}
+							}
 						}
 					}
 				}
 			}
+		}
+	}
+
+	private TypeUpdater<T> typeUpdater = new TypeUpdater<T>(this);
+
+	public TypeUpdater<T> getTypeUpdater() {
+		return typeUpdater;
+	}
+
+	private class TypeUpdater<T> extends VoidVisitorAdapter<T> {
+
+		CleanDeadDeclarationsVisitor<T> visitor;
+
+		public TypeUpdater(CleanDeadDeclarationsVisitor<T> visitor) {
+			this.visitor = visitor;
+		}
+
+		@Override
+		public void visit(ClassOrInterfaceType n, T ctx) {
+			SymbolDefinition def = n.getSymbolDefinition();
+			if (def != null) {
+				Node parent = ((Node) def).getParentNode();
+				List<SymbolReference> usages = def.getUsages();
+				Iterator<SymbolReference> it = usages.iterator();
+				boolean finish = false;
+				while (it.hasNext() && !finish) {
+					SymbolReference ref = it.next();
+					if (ref == n) {
+						it.remove();
+						if (parent != null) {
+							parent.accept(visitor, ctx);
+						}
+						finish = true;
+					}
+				}
+			}
+
 		}
 	}
 

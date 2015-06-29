@@ -251,6 +251,38 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 	}
 	
 	@Test
+	public void testRemoveRecursiveTypeStmts() throws Exception{
+		CompilationUnit cu = compile("public class Foo{ public void bar() { class AB {} AB ab = null;}}");
+		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+		MethodDeclaration md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(0);
+		Assert.assertTrue(md.getBody().getStmts().isEmpty());
+	}
+	
+	@Test
+	public void testRemoveRecursiveTypeDecl() throws Exception{
+		CompilationUnit cu = compile("public class Foo{ public void bar() { AB ab = null;} private class AB {}}");
+		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+		MethodDeclaration md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(0);
+		Assert.assertTrue(md.getBody().getStmts().isEmpty());
+		Assert.assertTrue(cu.getTypes().get(0).getMembers().size()==1);
+	}
+	
+	@Test
+	public void testRemoveRecursiveTypeDecl2() throws Exception{
+		CompilationUnit cu = compile("public class Foo{ private AB ab = null; private class AB {}}");
+		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+		Assert.assertTrue(cu.getTypes().get(0).getMembers().isEmpty());
+	}
+	
+	@Test
+	public void testRemoveRecursiveTypeDecl3() throws Exception{
+		CompilationUnit cu = compile("import java.util.List; public class Foo{ private List ab = null;}");
+		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+		Assert.assertTrue(cu.getTypes().get(0).getMembers().isEmpty());
+		Assert.assertTrue(cu.getImports().isEmpty());
+	}
+	
+	@Test
 	public void testVariableDependencies() throws Exception{
 		CompilationUnit cu = compile("public class Foo{ public int val; public void bar() { int x = 0; int y = x; val = y;}}");
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);

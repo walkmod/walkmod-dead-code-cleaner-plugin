@@ -43,14 +43,17 @@ import org.walkmod.javalang.ast.body.TypeDeclaration;
 import org.walkmod.javalang.ast.body.VariableDeclarator;
 import org.walkmod.javalang.ast.expr.AnnotationExpr;
 import org.walkmod.javalang.ast.expr.ArrayInitializerExpr;
+import org.walkmod.javalang.ast.expr.ClassExpr;
 import org.walkmod.javalang.ast.expr.Expression;
 import org.walkmod.javalang.ast.expr.MarkerAnnotationExpr;
 import org.walkmod.javalang.ast.expr.MemberValuePair;
 import org.walkmod.javalang.ast.expr.MethodCallExpr;
 import org.walkmod.javalang.ast.expr.NormalAnnotationExpr;
+import org.walkmod.javalang.ast.expr.ObjectCreationExpr;
 import org.walkmod.javalang.ast.expr.SingleMemberAnnotationExpr;
 import org.walkmod.javalang.ast.expr.StringLiteralExpr;
 import org.walkmod.javalang.ast.expr.VariableDeclarationExpr;
+import org.walkmod.javalang.ast.type.Type;
 import org.walkmod.javalang.visitors.GenericVisitorAdapter;
 import org.walkmod.javalang.visitors.VoidVisitorAdapter;
 
@@ -78,7 +81,7 @@ public class UnusedDefinitionsRemover extends
 				if (!containsSupressWarnings) {
 					it.remove();
 					removed = true;
-					removeOrphanBodyReferences(it, n);
+					removeOrphanBodyReferences (n);
 				}
 			} else {
 				n.accept(siblingsVisitor, null);
@@ -175,7 +178,7 @@ public class UnusedDefinitionsRemover extends
 				if (canBeRemoved && !containsSupressWarnings) {
 					it.remove();
 					removed = true;
-					removeOrphanBodyReferences(it, n);
+					removeOrphanBodyReferences(n);
 				}
 			} else {
 				n.accept(siblingsVisitor, null);
@@ -225,8 +228,12 @@ public class UnusedDefinitionsRemover extends
 				boolean canBeRemoved = !(belongsToSerializable && hasSerialVersionUID);
 				if (canBeRemoved && !containsSupressWarnings) {
 					it.remove();
-					removeOrphanBodyReferences(it, n);
+					removeOrphanBodyReferences(n);
 					removed = true;
+					Type sr = n.getType();
+					if(sr != null){
+						sr.accept(siblingsVisitor.getTypeUpdater(), null);
+					}
 				} else {
 					n.accept(siblingsVisitor, null);
 				}
@@ -456,12 +463,23 @@ public class UnusedDefinitionsRemover extends
 			boolean canBeRemoved = !(belongsToSerializable && n.getId()
 					.getName().equals("serialVersionUID"));
 			if (canBeRemoved && n.getInit() != null) {
-				Set<MethodCallExpr> ctx = new HashSet<MethodCallExpr>();
-				VoidVisitorAdapter<Set<MethodCallExpr>> v = new VoidVisitorAdapter<Set<MethodCallExpr>>() {
+				Set<Node> ctx = new HashSet<Node>();
+				VoidVisitorAdapter<Set<Node>> v = new VoidVisitorAdapter<Set<Node>>() {
 					@Override
-					public void visit(MethodCallExpr n, Set<MethodCallExpr> ctx) {
+					public void visit(MethodCallExpr n, Set<Node> ctx) {
 						ctx.add(n);
 					}
+					
+					@Override
+					public void visit(ObjectCreationExpr n, Set<Node> ctx) {
+						ctx.add(n);
+					}
+					
+					@Override
+					public void visit(ClassExpr n, Set<Node> ctx) {
+						ctx.add(n);
+					}
+					
 				};
 				n.getInit().accept(v, ctx);
 				canBeRemoved = ctx.isEmpty();
@@ -469,7 +487,7 @@ public class UnusedDefinitionsRemover extends
 			if (canBeRemoved && !containsSupressWarnings) {
 				it.remove();
 				removed = true;
-				removeOrphanBodyReferences(it, n);
+				removeOrphanBodyReferences(n);
 			}
 		} else {
 			n.accept(siblingsVisitor, null);
@@ -477,7 +495,7 @@ public class UnusedDefinitionsRemover extends
 		return removed;
 	}
 
-	public void removeOrphanBodyReferences(Iterator<? extends Node> it,
+	public void removeOrphanBodyReferences(
 			SymbolDefinition n) {
 
 		List<SymbolReference> references = n.getBodyReferences();
