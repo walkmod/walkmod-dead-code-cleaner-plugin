@@ -81,7 +81,7 @@ public class UnusedDefinitionsRemover extends
 				if (!containsSupressWarnings) {
 					it.remove();
 					removed = true;
-					removeOrphanBodyReferences (n);
+					removeOrphanBodyReferences(n);
 				}
 			} else {
 				n.accept(siblingsVisitor, null);
@@ -211,6 +211,8 @@ public class UnusedDefinitionsRemover extends
 				boolean belongsToSerializable = belongsToClass(n,
 						Serializable.class);
 				boolean hasSerialVersionUID = false;
+
+				boolean hasRemovableVars = true;
 				HasSupressWarning warning = new HasSupressWarning();
 				Boolean containsSupressWarnings = n.accept(warning, null);
 				if (containsSupressWarnings == null) {
@@ -220,18 +222,50 @@ public class UnusedDefinitionsRemover extends
 				if (vds != null) {
 					Iterator<VariableDeclarator> itV = vds.iterator();
 
-					while (itV.hasNext() && !hasSerialVersionUID) {
-						hasSerialVersionUID = itV.next().getId().getName()
+					while (itV.hasNext() && !hasSerialVersionUID
+							&& hasRemovableVars) {
+						VariableDeclarator vd = itV.next();
+
+						hasSerialVersionUID = vd.getId().getName()
 								.equals("serialVersionUID");
+						if (!hasSerialVersionUID) {
+							Set<Node> ctx = new HashSet<Node>();
+							VoidVisitorAdapter<Set<Node>> v = new VoidVisitorAdapter<Set<Node>>() {
+								@Override
+								public void visit(MethodCallExpr n,
+										Set<Node> ctx) {
+									ctx.add(n);
+								}
+
+								@Override
+								public void visit(ObjectCreationExpr n,
+										Set<Node> ctx) {
+									ctx.add(n);
+								}
+
+								@Override
+								public void visit(ClassExpr n, Set<Node> ctx) {
+									ctx.add(n);
+								}
+
+							};
+							Expression expr = vd.getInit();
+							if (expr != null) {
+								expr.accept(v, ctx);
+							}
+							hasRemovableVars = ctx.isEmpty();
+						}
+
 					}
 				}
-				boolean canBeRemoved = !(belongsToSerializable && hasSerialVersionUID);
+				boolean canBeRemoved = !(belongsToSerializable
+						&& hasSerialVersionUID) && hasRemovableVars;
 				if (canBeRemoved && !containsSupressWarnings) {
 					it.remove();
 					removeOrphanBodyReferences(n);
 					removed = true;
 					Type sr = n.getType();
-					if(sr != null){
+					if (sr != null) {
 						sr.accept(siblingsVisitor.getTypeUpdater(), null);
 					}
 				} else {
@@ -384,7 +418,7 @@ public class UnusedDefinitionsRemover extends
 			}
 			return containsSupressWarnings;
 		}
-		
+
 		@Override
 		public Boolean visit(ClassOrInterfaceDeclaration n, Object ctx) {
 			boolean containsSupressWarnings = false;
@@ -398,7 +432,7 @@ public class UnusedDefinitionsRemover extends
 			}
 			return containsSupressWarnings;
 		}
-		
+
 		@Override
 		public Boolean visit(EnumDeclaration n, Object ctx) {
 			boolean containsSupressWarnings = false;
@@ -412,7 +446,7 @@ public class UnusedDefinitionsRemover extends
 			}
 			return containsSupressWarnings;
 		}
-		
+
 		@Override
 		public Boolean visit(AnnotationDeclaration n, Object ctx) {
 			boolean containsSupressWarnings = false;
@@ -426,7 +460,7 @@ public class UnusedDefinitionsRemover extends
 			}
 			return containsSupressWarnings;
 		}
-		
+
 		@Override
 		public Boolean visit(EmptyTypeDeclaration n, Object ctx) {
 			boolean containsSupressWarnings = false;
@@ -469,17 +503,17 @@ public class UnusedDefinitionsRemover extends
 					public void visit(MethodCallExpr n, Set<Node> ctx) {
 						ctx.add(n);
 					}
-					
+
 					@Override
 					public void visit(ObjectCreationExpr n, Set<Node> ctx) {
 						ctx.add(n);
 					}
-					
+
 					@Override
 					public void visit(ClassExpr n, Set<Node> ctx) {
 						ctx.add(n);
 					}
-					
+
 				};
 				n.getInit().accept(v, ctx);
 				canBeRemoved = ctx.isEmpty();
@@ -495,8 +529,7 @@ public class UnusedDefinitionsRemover extends
 		return removed;
 	}
 
-	public void removeOrphanBodyReferences(
-			SymbolDefinition n) {
+	public void removeOrphanBodyReferences(SymbolDefinition n) {
 
 		List<SymbolReference> references = n.getBodyReferences();
 		if (references != null) {

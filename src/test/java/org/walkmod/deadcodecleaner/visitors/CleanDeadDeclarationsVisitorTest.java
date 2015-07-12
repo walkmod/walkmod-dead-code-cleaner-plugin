@@ -15,13 +15,21 @@ You should have received a copy of the GNU Lesser General Public License
 along with Walkmod.  If not, see <http://www.gnu.org/licenses/>.*/
 package org.walkmod.deadcodecleaner.visitors;
 
+import java.util.List;
+
 import org.junit.Assert;
 import org.junit.Test;
-import org.walkmod.deadcodecleaner.visitors.CleanDeadDeclarationsVisitor;
 import org.walkmod.javalang.ast.CompilationUnit;
+import org.walkmod.javalang.ast.ImportDeclaration;
+import org.walkmod.javalang.ast.body.BodyDeclaration;
+import org.walkmod.javalang.ast.body.FieldDeclaration;
 import org.walkmod.javalang.ast.body.MethodDeclaration;
+import org.walkmod.javalang.ast.body.VariableDeclarator;
+import org.walkmod.javalang.ast.expr.ObjectCreationExpr;
+import org.walkmod.javalang.ast.expr.VariableDeclarationExpr;
+import org.walkmod.javalang.ast.stmt.ExpressionStmt;
+import org.walkmod.javalang.ast.stmt.Statement;
 import org.walkmod.javalang.test.SemanticTest;
-
 
 public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 
@@ -32,7 +40,7 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertTrue(cu.getTypes().get(0).getMembers().isEmpty());
 	}
-	
+
 	@Test
 	public void testRemoveUnusedAnnotatedMethods() throws Exception {
 		CompilationUnit cu = compile("public class Foo { @SuppressWarnings(\"unused\")private void bar(){} }");
@@ -69,9 +77,9 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertEquals(2, cu.getTypes().get(0).getMembers().size());
 	}
-	
+
 	@Test
-	public void testRemoveRecursiveMethods() throws Exception{
+	public void testRemoveRecursiveMethods() throws Exception {
 		CompilationUnit cu = compile("public class Foo { private void bar(){ foo(); } private void foo(){ zzz(); } private void zzz(){}}");
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertEquals(0, cu.getTypes().get(0).getMembers().size());
@@ -83,7 +91,7 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertTrue(cu.getTypes().get(0).getMembers().isEmpty());
 	}
-	
+
 	@Test
 	public void testRemoveUnusedAnnotatedFields() throws Exception {
 		CompilationUnit cu = compile("public class Foo {  @SuppressWarnings(\"unused\") private String bar; }");
@@ -104,7 +112,7 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertTrue(cu.getTypes().get(0).getMembers().isEmpty());
 	}
-	
+
 	@Test
 	public void testRemoveUnusedAnnotatedTypes() throws Exception {
 		CompilationUnit cu = compile("public class Foo { @SuppressWarnings(\"unused\") private class Bar{} }");
@@ -121,7 +129,7 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		Assert.assertTrue(md.getBody().getStmts().isEmpty());
 
 	}
-	
+
 	@Test
 	public void testRemoveUnusedVariables2() throws Exception {
 		CompilationUnit cu = compile("public class Foo { public void bar(){ @SuppressWarnings({\"UnusedDeclaration\", \"unused\"}) int i;} }");
@@ -138,7 +146,6 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertTrue(cu.getImports().isEmpty());
 	}
-	
 
 	@Test
 	public void testStaticImportsWithWildcard() throws Exception {
@@ -227,83 +234,87 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertTrue(!cu.getImports().isEmpty());
 	}
-	
+
 	@Test
-	public void testRemoveRecursiveFields() throws Exception{
+	public void testRemoveRecursiveFields() throws Exception {
 		CompilationUnit cu = compile("public class Foo{ private String name =\"Rachel\"; private String surname=name+\" Pau\";}");
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertTrue(cu.getTypes().get(0).getMembers().isEmpty());
 	}
 
 	@Test
-	public void testFieldDependencies() throws Exception{
+	public void testFieldDependencies() throws Exception {
 		CompilationUnit cu = compile("public class Foo{ private String name =\"Rachel\"; public String surname=name+\" Pau\";}");
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertTrue(!cu.getTypes().get(0).getMembers().isEmpty());
 	}
-	
+
 	@Test
-	public void testRemoveRecursiveVariables() throws Exception{
+	public void testRemoveRecursiveVariables() throws Exception {
 		CompilationUnit cu = compile("public class Foo{ public void bar() { int x = 0; int y = x; }}");
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
-		MethodDeclaration md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(0);
+		MethodDeclaration md = (MethodDeclaration) cu.getTypes().get(0)
+				.getMembers().get(0);
 		Assert.assertTrue(md.getBody().getStmts().isEmpty());
 	}
-	
+
 	@Test
-	public void testRemoveRecursiveTypeStmts() throws Exception{
+	public void testRemoveRecursiveTypeStmts() throws Exception {
 		CompilationUnit cu = compile("public class Foo{ public void bar() { class AB {} AB ab = null;}}");
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
-		MethodDeclaration md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(0);
+		MethodDeclaration md = (MethodDeclaration) cu.getTypes().get(0)
+				.getMembers().get(0);
 		Assert.assertTrue(md.getBody().getStmts().isEmpty());
 	}
-	
+
 	@Test
-	public void testRemoveRecursiveTypeDecl() throws Exception{
+	public void testRemoveRecursiveTypeDecl() throws Exception {
 		CompilationUnit cu = compile("public class Foo{ public void bar() { AB ab = null;} private class AB {}}");
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
-		MethodDeclaration md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(0);
+		MethodDeclaration md = (MethodDeclaration) cu.getTypes().get(0)
+				.getMembers().get(0);
 		Assert.assertTrue(md.getBody().getStmts().isEmpty());
-		Assert.assertTrue(cu.getTypes().get(0).getMembers().size()==1);
+		Assert.assertTrue(cu.getTypes().get(0).getMembers().size() == 1);
 	}
-	
+
 	@Test
-	public void testRemoveRecursiveTypeDecl2() throws Exception{
+	public void testRemoveRecursiveTypeDecl2() throws Exception {
 		CompilationUnit cu = compile("public class Foo{ private AB ab = null; private class AB {}}");
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertTrue(cu.getTypes().get(0).getMembers().isEmpty());
 	}
-	
+
 	@Test
-	public void testRemoveRecursiveTypeDecl3() throws Exception{
+	public void testRemoveRecursiveTypeDecl3() throws Exception {
 		CompilationUnit cu = compile("import java.util.List; public class Foo{ private List ab = null;}");
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertTrue(cu.getTypes().get(0).getMembers().isEmpty());
 		Assert.assertTrue(cu.getImports().isEmpty());
 	}
-	
-	@Test 
-	public void testSuppressWarningsOnMethods() throws Exception{
+
+	@Test
+	public void testSuppressWarningsOnMethods() throws Exception {
 		CompilationUnit cu = compile("public class Foo { @SuppressWarnings(\"unused\") private void foo(){} }");
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertTrue(!cu.getTypes().get(0).getMembers().isEmpty());
 	}
-	
+
 	@Test
-	public void testVariableDependencies() throws Exception{
+	public void testVariableDependencies() throws Exception {
 		CompilationUnit cu = compile("public class Foo{ public int val; public void bar() { int x = 0; int y = x; val = y;}}");
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
-		MethodDeclaration md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(1);
-		Assert.assertEquals(3,md.getBody().getStmts().size());
-		
+		MethodDeclaration md = (MethodDeclaration) cu.getTypes().get(0)
+				.getMembers().get(1);
+		Assert.assertEquals(3, md.getBody().getStmts().size());
+
 		cu = compile("public class Foo{ public int val; public void bar() { int x = 0; int y = x; val = x;}}");
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
-		md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(1);
-		Assert.assertEquals(2,md.getBody().getStmts().size());
+		md = (MethodDeclaration) cu.getTypes().get(0).getMembers().get(1);
+		Assert.assertEquals(2, md.getBody().getStmts().size());
 	}
-	
+
 	@Test
-	public void testSettings() throws Exception{
+	public void testSettings() throws Exception {
 		CompilationUnit cu = compile("import java.util.List; public class Foo{ private int val; private void bar() { int x = 0; int y = x;}}");
 		CleanDeadDeclarationsVisitor<Object> visitor = new CleanDeadDeclarationsVisitor<Object>();
 		visitor.setRemoveUnusedImports(false);
@@ -313,7 +324,71 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		cu.accept(visitor, null);
 		Assert.assertTrue(!cu.getImports().isEmpty());
 		Assert.assertEquals(2, cu.getTypes().get(0).getMembers().size());
-		MethodDeclaration md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(1);
-		Assert.assertEquals(2,md.getBody().getStmts().size());
+		MethodDeclaration md = (MethodDeclaration) cu.getTypes().get(0)
+				.getMembers().get(1);
+		Assert.assertEquals(2, md.getBody().getStmts().size());
 	}
+
+	@Test
+	public void testMultipleStaticImportsFromTheSameClass() throws Exception {
+		String externalClass = "package foo; class Files { public static void touch() {} public static void createTempDir(){} public static void bar3(){} }";
+		String mainClass = "package foo; import static foo.Files.createTempDir; import static foo.Files.touch; import java.io.File; class A { void foo() { Files.createTempDir(); }}";
+		CompilationUnit cu = compile(mainClass, externalClass);
+		Assert.assertNull(cu.getImports().get(0).getUsages());
+		Assert.assertNull(cu.getImports().get(1).getUsages());
+		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+		Assert.assertEquals(0, cu.getImports().size());
+
+	}
+	
+	@Test
+	public void testRemovalOfUnusedFieldsWithMethodCallInit() throws Exception{
+		CompilationUnit cu = compile("public class Foo { private static final boolean useSecurityManager =  Boolean.getBoolean(\"jsr166.useSecurityManager\"); }");
+		Assert.assertEquals(1, cu.getTypes().get(0).getMembers().size());
+	}
+	
+	
+	@Test
+	public void testMultipleVariablesAtDifferentScopes() throws Exception {
+		String code = "public class A { public final int value = 4; public void doIt() { "
+				+ " int value = 6; "
+				+ "Runnable r = new Runnable(){ "
+				+ "public final int value = 5;"
+				+ "public void run(){"
+				+ "int value = 10;"
+				+ "System.out.println(this.value);"
+				+ "}"
+				+ "}; " + " r.run(); }" + "}";
+		CompilationUnit cu = compile(code);
+		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+		List<BodyDeclaration> members = cu.getTypes().get(0).getMembers();
+	
+		Assert.assertEquals(2,members.size());
+		
+
+		MethodDeclaration md = (MethodDeclaration) members.get(1);
+		List<Statement> stmts = md.getBody().getStmts();
+		Assert.assertEquals(2,stmts.size());
+		
+		ExpressionStmt expression = (ExpressionStmt) stmts.get(0);
+
+		VariableDeclarationExpr vdexpr = (VariableDeclarationExpr) expression
+				.getExpression();
+		List<VariableDeclarator> vds = vdexpr.getVars();
+		Assert.assertNotNull(vds.get(0).getUsages());
+		
+
+		ObjectCreationExpr typeStmt = (ObjectCreationExpr) vds.get(0).getInit();
+		List<BodyDeclaration> typeMembers = typeStmt.getAnonymousClassBody();
+
+		FieldDeclaration fd = (FieldDeclaration) typeMembers.get(0);
+		Assert.assertNotNull(fd.getUsages());
+
+		md = (MethodDeclaration) typeMembers.get(1);
+		stmts = md.getBody().getStmts();
+		Assert.assertEquals(1,stmts.size());
+
+	}
+
+	 
 }
