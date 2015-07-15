@@ -70,6 +70,23 @@ You can apply walkmod-imports-cleaner-plugin via walkmod.
 Or, you can also check which would be the modified classes typing:
 
   $ walkmod check
+  
+Optionally, the plugin allows to select which elements are candidates to remove: private types, private methods, 
+private fields, variables or imports:
+
+```XML
+	 <transformation type="walkmod:commons:unused-declarations-cleaner">
+	 	<param name="removeUnusedImports">true</param>
+	 	<param name="removeUnusedVariables">true</param>
+	 	<param name="removeUnusedClasses">true</param>
+	 	<param name="removeUnusedInterfaces">true</param>
+	 	<param name="removeUnusedAnnotationTypes">true</param>
+	 	<param name="removeUnusedEnumerations">true</param>
+	 	<param name="removeUnusedMethods">true</param>
+	 	<param name="removeUnusedFields">true</param>
+	 </transformation>
+```
+
 
 == Contributing
 
