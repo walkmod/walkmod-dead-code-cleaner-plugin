@@ -2,6 +2,8 @@ walkmod-dead-code-cleaner-plugin
 ================================
 Raquel Pau <raquelpau@gmail.com>
 
+image:https://travis-ci.org/rpau/walkmod-dead-code-cleaner-plugin.svg?branch=master["Build Status", link="https://travis-ci.org/rpau/walkmod-dead-code-cleaner-plugin"]
+
 This is a walkmod plugin to remove unused declarations (imports, variables and private fields, methods and types) in Java source files. 
 It applies the clean procedure in cascade. For example, if a unused method uses some types that are just used in this method, the imports 
 related to these types are also removed.
