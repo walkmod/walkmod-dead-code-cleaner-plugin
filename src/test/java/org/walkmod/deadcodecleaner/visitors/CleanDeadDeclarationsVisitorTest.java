@@ -389,6 +389,35 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		Assert.assertEquals(1,stmts.size());
 
 	}
+	
+	@Test
+	public void testVariblesInsideForEachs() throws Exception{
+		
+		String code = "import java.util.List; public class A { public Integer doIt(List<Integer> list){ "
+				+ " int value = 6; "
+				+ "for(Integer number: list) { value++; } "
+				+ "return value; "
+				+ "}"
+			 + "}";
+		CompilationUnit cu = compile(code);
+		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+		MethodDeclaration md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(0);
+		Assert.assertEquals(3,md.getBody().getStmts().size());
+	}
 
+	@Test
+	public void testVariblesInsideFors() throws Exception{
+		
+		String code = "import java.util.List; public class A { public Integer doIt(){ "
+				+ " int value = 6; "
+				+ "for(int i = 0; value < 10;) { value++; } "
+				+ "return value; "
+				+ "}"
+			 + "}";
+		CompilationUnit cu = compile(code);
+		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+		MethodDeclaration md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(0);
+		Assert.assertEquals(3,md.getBody().getStmts().size());
+	}
 	 
 }

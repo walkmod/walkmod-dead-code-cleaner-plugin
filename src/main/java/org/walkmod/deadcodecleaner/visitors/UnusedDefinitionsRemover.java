@@ -53,6 +53,8 @@ import org.walkmod.javalang.ast.expr.ObjectCreationExpr;
 import org.walkmod.javalang.ast.expr.SingleMemberAnnotationExpr;
 import org.walkmod.javalang.ast.expr.StringLiteralExpr;
 import org.walkmod.javalang.ast.expr.VariableDeclarationExpr;
+import org.walkmod.javalang.ast.stmt.ForStmt;
+import org.walkmod.javalang.ast.stmt.ForeachStmt;
 import org.walkmod.javalang.ast.type.Type;
 import org.walkmod.javalang.visitors.GenericVisitorAdapter;
 import org.walkmod.javalang.visitors.VoidVisitorAdapter;
@@ -496,6 +498,24 @@ public class UnusedDefinitionsRemover extends
 			}
 			boolean canBeRemoved = !(belongsToSerializable && n.getId()
 					.getName().equals("serialVersionUID"));
+			
+			if (parent != null && canBeRemoved){
+				Node grandParent = parent.getParentNode();
+				if (grandParent instanceof ForeachStmt){
+					ForeachStmt foreach = (ForeachStmt) grandParent;
+					canBeRemoved = !(foreach.getVariable() == parent);
+				}
+				else if(grandParent instanceof ForStmt){
+					ForStmt forStmt = (ForStmt) grandParent;
+					List<Expression> initExprs = forStmt.getInit();
+					if (initExprs != null){
+						for(Expression init: initExprs){
+							canBeRemoved = canBeRemoved && (init != parent);
+						}
+					}
+				}
+			}
+			
 			if (canBeRemoved && n.getInit() != null) {
 				Set<Node> ctx = new HashSet<Node>();
 				VoidVisitorAdapter<Set<Node>> v = new VoidVisitorAdapter<Set<Node>>() {
