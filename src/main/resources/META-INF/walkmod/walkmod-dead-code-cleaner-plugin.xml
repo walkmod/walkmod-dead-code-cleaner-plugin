@@ -8,4 +8,7 @@
 
 	<alias name="org.walkmod:walkmod-dead-code-cleaner-plugin:unused-declarations-cleaner"
 		alias="walkmod:commons:unused-declarations-cleaner" />
+	
+	<alias name="org.walkmod:walkmod-dead-code-cleaner-plugin:unused-declarations-cleaner"
+		alias="org.walkmod:walkmod-dead-code-cleaner-plugin:dead-code-cleaner" />
 </beans>
