@@ -20,7 +20,6 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 import org.walkmod.javalang.ast.CompilationUnit;
-import org.walkmod.javalang.ast.ImportDeclaration;
 import org.walkmod.javalang.ast.body.BodyDeclaration;
 import org.walkmod.javalang.ast.body.FieldDeclaration;
 import org.walkmod.javalang.ast.body.MethodDeclaration;
@@ -418,6 +417,15 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		MethodDeclaration md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(0);
 		Assert.assertEquals(3,md.getBody().getStmts().size());
+	}
+	
+	@Test
+	public void testVariablesInsideTry() throws Exception {
+		String code = "import java.io.*; public class A { BufferedReader y; public void foo() throws IOException { try( BufferedReader x = y){ foo(); }} }";
+		CompilationUnit cu = compile(code);
+		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+		MethodDeclaration md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(1);
+		Assert.assertEquals(1,md.getBody().getStmts().size());
 	}
 	 
 }

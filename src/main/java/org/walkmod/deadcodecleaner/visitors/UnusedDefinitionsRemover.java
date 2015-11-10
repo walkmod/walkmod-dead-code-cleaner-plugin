@@ -55,6 +55,7 @@ import org.walkmod.javalang.ast.expr.StringLiteralExpr;
 import org.walkmod.javalang.ast.expr.VariableDeclarationExpr;
 import org.walkmod.javalang.ast.stmt.ForStmt;
 import org.walkmod.javalang.ast.stmt.ForeachStmt;
+import org.walkmod.javalang.ast.stmt.TryStmt;
 import org.walkmod.javalang.ast.type.Type;
 import org.walkmod.javalang.visitors.GenericVisitorAdapter;
 import org.walkmod.javalang.visitors.VoidVisitorAdapter;
@@ -513,6 +514,11 @@ public class UnusedDefinitionsRemover extends
 							canBeRemoved = canBeRemoved && (init != parent);
 						}
 					}
+				}
+				else if(grandParent instanceof TryStmt){
+					TryStmt tryStmt = (TryStmt) grandParent;
+					List<VariableDeclarationExpr> vars = tryStmt.getResources();
+					canBeRemoved = !(vars.contains(parent));
 				}
 			}
 			
