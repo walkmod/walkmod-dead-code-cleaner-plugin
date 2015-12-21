@@ -41,31 +41,27 @@ public class Foo{
 
 == Usage
 
-. Add the https://github.com/rpau/walkmod-maven-plugin[walkmod-maven-plugin] into your `walkmod.xml` as a plugin. 
-This plugin will interpret your classpath accoding your `pom.xml` and will compile your code.
+Check that your walkmod version is at least 2.0.
 
-. Add https://github.com/rpau/walkmod-dead-code-cleaner-plugin[walkmod-dead-code-cleaner-plugin] into your `walkmod.xml` as a plugin.
+. Add the https://github.com/rpau/walkmod-maven-plugin[walkmod-maven-plugin] into your `walkmod.xml` as a configuration provider. 
+This plugin will interpret your classpath accoding your `pom.xml` and will build your project to make the application 
+classpath available for walkmod.
 
-. Add the transformations `walkmod:commons:unused-declarations-cleaner` into your  `walkmod.xml` and 
-set your refactoring configurations.
+. Add the transformation `dead-code-cleaner` into your  `walkmod.xml`.
 
 ```XML
-<!DOCTYPE walkmod PUBLIC "-//WALKMOD//DTD"  "http://www.walkmod.com/dtd/walkmod-1.0.dtd" >
+<!DOCTYPE walkmod PUBLIC "-//WALKMOD//DTD" "http://www.walkmod.com/dtd/walkmod-1.1.dtd">
 <walkmod>
-  <plugins>
-    <plugin groupId="org.walkmod" artifactId="walkmod-maven-plugin" version="[1.1.1,)" />
-    <plugin groupId="org.walkmod" artifactId="walkmod-dead-code-cleaner-plugin" version="1.0.0" />
-  </plugins>
-  <conf-providers>
-    <conf-provider type="walkmod:commons:maven"></conf-provider>
-  </conf-providers>
-  <chain name="main-chain">	
-    <transformation type="walkmod:commons:unused-declarations-cleaner"/>
-  </chain>	
+    <conf-providers>
+        <conf-provider type="maven"/>
+    </conf-providers>
+    <chain name="default">
+        <transformation type="dead-code-cleaner"/>
+    </chain>
 </walkmod>
 ```
 
-You can apply walkmod-imports-cleaner-plugin via walkmod. 
+You can apply walkmod-dead-code-cleaner-plugin via walkmod. 
 
   $ walkmod apply
 
@@ -77,7 +73,7 @@ Optionally, the plugin allows to select which elements are candidates to remove:
 private fields, variables or imports:
 
 ```XML
-	 <transformation type="walkmod:commons:unused-declarations-cleaner">
+	 <transformation type="dead-code-cleaner">
 	 	<param name="removeUnusedImports">true</param>
 	 	<param name="removeUnusedVariables">true</param>
 	 	<param name="removeUnusedClasses">true</param>
