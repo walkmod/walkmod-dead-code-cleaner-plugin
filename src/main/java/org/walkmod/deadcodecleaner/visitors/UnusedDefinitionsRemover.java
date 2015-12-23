@@ -143,7 +143,9 @@ public class UnusedDefinitionsRemover extends
 				if (containsSupressWarnings == null) {
 					containsSupressWarnings = false;
 				}
-				if (belongsToSerializableOrExternalizable) {
+				
+				
+				if (belongsToSerializableOrExternalizable || siblingsVisitor.getIgnoreSerializableMethods()) {
 					String name = n.getName();
 					List<Parameter> params = n.getParameters();
 					if ((name.equals("readResolve")
@@ -177,7 +179,7 @@ public class UnusedDefinitionsRemover extends
 						containsAnSerializableMethod = true;
 					}
 				}
-				boolean canBeRemoved = !(belongsToSerializableOrExternalizable && containsAnSerializableMethod);
+				boolean canBeRemoved = !((belongsToSerializableOrExternalizable || siblingsVisitor.getIgnoreSerializableMethods()) && containsAnSerializableMethod);
 				if (canBeRemoved && !containsSupressWarnings) {
 					it.remove();
 					removed = true;

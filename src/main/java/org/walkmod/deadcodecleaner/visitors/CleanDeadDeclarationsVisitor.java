@@ -61,6 +61,8 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 	private Boolean removeUnusedMethods = true;
 
 	private Boolean removeUnusedFields = true;
+	
+	private Boolean ignoreSerializableMethods = false;
 
 	private UnusedDefinitionsRemover remover = new UnusedDefinitionsRemover(
 			this);
@@ -333,6 +335,14 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 
 	public void setRemoveUnusedFields(Boolean removeUnusedFields) {
 		this.removeUnusedFields = removeUnusedFields;
+	}
+	
+	public Boolean getIgnoreSerializableMethods() {
+		return ignoreSerializableMethods;
+	}
+
+	public void setIgnoreSerializableMethods(Boolean ignoreSerializableMethods) {
+		this.ignoreSerializableMethods = ignoreSerializableMethods;
 	}
 
 	public Boolean getRemoveUnusedEnumerations() {

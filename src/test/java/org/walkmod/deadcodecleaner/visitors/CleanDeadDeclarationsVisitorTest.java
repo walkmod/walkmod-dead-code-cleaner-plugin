@@ -409,5 +409,15 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 			Assert.assertEquals(1, md.getBody().getStmts().size());
 		}
 	}
+	
+	@Test
+	public void testIgnoreSerializableMethods() throws Exception{
+		String code = "public class Foo{ private void readResolve() {} }";
+		CompilationUnit cu = compile(code);
+		CleanDeadDeclarationsVisitor<?> visitor = new CleanDeadDeclarationsVisitor<Object>();
+		visitor.setIgnoreSerializableMethods(true);
+		cu.accept(visitor, null);
+		Assert.assertNotNull(cu.getTypes().get(0).getMembers());
+	}
 
 }
