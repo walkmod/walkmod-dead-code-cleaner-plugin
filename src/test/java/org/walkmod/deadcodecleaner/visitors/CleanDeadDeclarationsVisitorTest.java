@@ -15,6 +15,7 @@ You should have received a copy of the GNU Lesser General Public License
 along with Walkmod.  If not, see <http://www.gnu.org/licenses/>.*/
 package org.walkmod.deadcodecleaner.visitors;
 
+import java.util.LinkedList;
 import java.util.List;
 
 import javax.lang.model.SourceVersion;
@@ -31,6 +32,8 @@ import org.walkmod.javalang.ast.expr.VariableDeclarationExpr;
 import org.walkmod.javalang.ast.stmt.ExpressionStmt;
 import org.walkmod.javalang.ast.stmt.Statement;
 import org.walkmod.javalang.test.SemanticTest;
+
+import com.alibaba.fastjson.JSONArray;
 
 public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 
@@ -418,6 +421,19 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		visitor.setIgnoreSerializableMethods(true);
 		cu.accept(visitor, null);
 		Assert.assertNotNull(cu.getTypes().get(0).getMembers());
+	}
+	
+	@Test
+	public void testExcludedMethods() throws Exception{
+		String code = "public class Foo{ private void _syncIO() {} }";
+		CompilationUnit cu = compile(code);
+		CleanDeadDeclarationsVisitor<?> visitor = new CleanDeadDeclarationsVisitor<Object>();
+		List<Object> content = new LinkedList<Object>();
+		content.add("Foo#_syncIO()");
+		JSONArray array = new JSONArray(content);
+		visitor.setExcludedMethods(array);
+		cu.accept(visitor, null);
+		Assert.assertEquals(1, cu.getTypes().get(0).getMembers().size());
 	}
 
 }

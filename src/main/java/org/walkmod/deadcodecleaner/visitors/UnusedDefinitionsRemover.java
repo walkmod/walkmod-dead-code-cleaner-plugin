@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.walkmod.javalang.ast.ImportDeclaration;
+import org.walkmod.javalang.ast.MethodSymbolData;
 import org.walkmod.javalang.ast.Node;
 import org.walkmod.javalang.ast.SymbolData;
 import org.walkmod.javalang.ast.SymbolDataAware;
@@ -60,18 +61,15 @@ import org.walkmod.javalang.ast.type.Type;
 import org.walkmod.javalang.visitors.GenericVisitorAdapter;
 import org.walkmod.javalang.visitors.VoidVisitorAdapter;
 
-public class UnusedDefinitionsRemover extends
-		GenericVisitorAdapter<Boolean, Iterator<? extends Node>> {
+public class UnusedDefinitionsRemover extends GenericVisitorAdapter<Boolean, Iterator<? extends Node>> {
 
 	private CleanDeadDeclarationsVisitor<?> siblingsVisitor;
 
-	public UnusedDefinitionsRemover(
-			CleanDeadDeclarationsVisitor<?> siblingsVisitor) {
+	public UnusedDefinitionsRemover(CleanDeadDeclarationsVisitor<?> siblingsVisitor) {
 		this.siblingsVisitor = siblingsVisitor;
 	}
 
-	public Boolean visitTypeDeclaration(TypeDeclaration n,
-			Iterator<? extends Node> it) {
+	public Boolean visitTypeDeclaration(TypeDeclaration n, Iterator<? extends Node> it) {
 		boolean removed = false;
 		if (ModifierSet.isPrivate(n.getModifiers())) {
 			List<SymbolReference> usages = n.getUsages();
@@ -95,11 +93,9 @@ public class UnusedDefinitionsRemover extends
 		return removed;
 	}
 
-	public Boolean visit(ClassOrInterfaceDeclaration n,
-			Iterator<? extends Node> it) {
+	public Boolean visit(ClassOrInterfaceDeclaration n, Iterator<? extends Node> it) {
 		if ((siblingsVisitor.getRemoveUnusedClasses() && !n.isInterface())
-				|| siblingsVisitor.getRemoveUnusedInterfaces()
-				&& n.isInterface()) {
+				|| siblingsVisitor.getRemoveUnusedInterfaces() && n.isInterface()) {
 			return visitTypeDeclaration(n, it);
 		} else {
 			n.accept(siblingsVisitor, null);
@@ -131,59 +127,53 @@ public class UnusedDefinitionsRemover extends
 
 	public Boolean visit(MethodDeclaration n, Iterator<? extends Node> it) {
 		boolean removed = false;
-		if (siblingsVisitor.getRemoveUnusedMethods()
-				&& ModifierSet.isPrivate(n.getModifiers())) {
+		if (siblingsVisitor.getRemoveUnusedMethods() && ModifierSet.isPrivate(n.getModifiers())) {
 			List<SymbolReference> usages = n.getUsages();
 			if (usages == null || usages.isEmpty()) {
-				boolean belongsToSerializableOrExternalizable = belongsToClass(
-						n, Serializable.class);
+				boolean belongsToSerializableOrExternalizable = belongsToClass(n, Serializable.class);
 				boolean containsAnSerializableMethod = false;
 				HasSupressWarning warning = new HasSupressWarning();
 				Boolean containsSupressWarnings = n.accept(warning, null);
 				if (containsSupressWarnings == null) {
 					containsSupressWarnings = false;
 				}
-				
-				
+
 				if (belongsToSerializableOrExternalizable || siblingsVisitor.getIgnoreSerializableMethods()) {
 					String name = n.getName();
 					List<Parameter> params = n.getParameters();
-					if ((name.equals("readResolve")
-							|| name.equals("readObjectNoData") || name
-								.equals("writeReplace"))
+					if ((name.equals("readResolve") || name.equals("readObjectNoData") || name.equals("writeReplace"))
 							&& (params == null || params.isEmpty())) {
 						containsAnSerializableMethod = true;
-					} else if (name.equals("readObject") && params != null
-							&& params.size() == 1) {
+					} else if (name.equals("readObject") && params != null && params.size() == 1) {
 						SymbolData sd = params.get(0).getSymbolData();
 						if (sd != null) {
-							containsAnSerializableMethod = sd.getClazz()
-									.equals(ObjectInputStream.class);
+							containsAnSerializableMethod = sd.getClazz().equals(ObjectInputStream.class);
 						}
-					} else if (name.equals("writeObject") && params != null
-							&& params.size() == 1) {
+					} else if (name.equals("writeObject") && params != null && params.size() == 1) {
 						SymbolData sd = params.get(0).getSymbolData();
 						if (sd != null) {
-							containsAnSerializableMethod = sd.getClazz()
-									.equals(ObjectOutputStream.class);
+							containsAnSerializableMethod = sd.getClazz().equals(ObjectOutputStream.class);
 						}
 					}
 				} else {
-					belongsToSerializableOrExternalizable = belongsToClass(n,
-							Externalizable.class);
+					belongsToSerializableOrExternalizable = belongsToClass(n, Externalizable.class);
 					String name = n.getName();
 					List<Parameter> params = n.getParameters();
-					if ((name.equals("readResolve") || name
-							.equals("writeReplace"))
+					if ((name.equals("readResolve") || name.equals("writeReplace"))
 							&& (params == null || params.isEmpty())) {
 						containsAnSerializableMethod = true;
 					}
 				}
-				boolean canBeRemoved = !((belongsToSerializableOrExternalizable || siblingsVisitor.getIgnoreSerializableMethods()) && containsAnSerializableMethod);
+				boolean canBeRemoved = !((belongsToSerializableOrExternalizable
+						|| siblingsVisitor.getIgnoreSerializableMethods()) && containsAnSerializableMethod);
+
 				if (canBeRemoved && !containsSupressWarnings) {
-					it.remove();
-					removed = true;
-					removeOrphanBodyReferences(n);
+					MethodSymbolData msd = n.getSymbolData();
+					if (msd == null || !siblingsVisitor.isExcluded(msd.getMethod())) {
+						it.remove();
+						removed = true;
+						removeOrphanBodyReferences(n);
+					}
 				}
 			} else {
 				n.accept(siblingsVisitor, null);
@@ -209,12 +199,10 @@ public class UnusedDefinitionsRemover extends
 	@Override
 	public Boolean visit(FieldDeclaration n, Iterator<? extends Node> it) {
 		boolean removed = false;
-		if (siblingsVisitor.getRemoveUnusedFields()
-				&& ModifierSet.isPrivate(n.getModifiers())) {
+		if (siblingsVisitor.getRemoveUnusedFields() && ModifierSet.isPrivate(n.getModifiers())) {
 			List<SymbolReference> usages = n.getUsages();
 			if (usages == null || usages.isEmpty()) {
-				boolean belongsToSerializable = belongsToClass(n,
-						Serializable.class);
+				boolean belongsToSerializable = belongsToClass(n, Serializable.class);
 				boolean hasSerialVersionUID = false;
 
 				boolean hasRemovableVars = true;
@@ -227,24 +215,20 @@ public class UnusedDefinitionsRemover extends
 				if (vds != null) {
 					Iterator<VariableDeclarator> itV = vds.iterator();
 
-					while (itV.hasNext() && !hasSerialVersionUID
-							&& hasRemovableVars) {
+					while (itV.hasNext() && !hasSerialVersionUID && hasRemovableVars) {
 						VariableDeclarator vd = itV.next();
 
-						hasSerialVersionUID = vd.getId().getName()
-								.equals("serialVersionUID");
+						hasSerialVersionUID = vd.getId().getName().equals("serialVersionUID");
 						if (!hasSerialVersionUID) {
 							Set<Node> ctx = new HashSet<Node>();
 							VoidVisitorAdapter<Set<Node>> v = new VoidVisitorAdapter<Set<Node>>() {
 								@Override
-								public void visit(MethodCallExpr n,
-										Set<Node> ctx) {
+								public void visit(MethodCallExpr n, Set<Node> ctx) {
 									ctx.add(n);
 								}
 
 								@Override
-								public void visit(ObjectCreationExpr n,
-										Set<Node> ctx) {
+								public void visit(ObjectCreationExpr n, Set<Node> ctx) {
 									ctx.add(n);
 								}
 
@@ -263,8 +247,7 @@ public class UnusedDefinitionsRemover extends
 
 					}
 				}
-				boolean canBeRemoved = !(belongsToSerializable
-						&& hasSerialVersionUID) && hasRemovableVars;
+				boolean canBeRemoved = !(belongsToSerializable && hasSerialVersionUID) && hasRemovableVars;
 				if (canBeRemoved && !containsSupressWarnings) {
 					it.remove();
 					removeOrphanBodyReferences(n);
@@ -289,8 +272,7 @@ public class UnusedDefinitionsRemover extends
 	public Boolean visit(ImportDeclaration n, Iterator<? extends Node> it) {
 		boolean removed = false;
 		List<SymbolReference> usages = n.getUsages();
-		if (siblingsVisitor.getRemoveUnusedImports() && usages == null
-				|| usages.isEmpty()) {
+		if (siblingsVisitor.getRemoveUnusedImports() && usages == null || usages.isEmpty()) {
 			it.remove();
 			removed = true;
 		} else {
@@ -310,8 +292,7 @@ public class UnusedDefinitionsRemover extends
 			SymbolData sd = n.getSymbolData();
 			if (sd != null) {
 				if (SuppressWarnings.class.isAssignableFrom(sd.getClazz())) {
-					Boolean hasTheUnUnusedValue = n.getMemberValue().accept(
-							this, ctx);
+					Boolean hasTheUnUnusedValue = n.getMemberValue().accept(this, ctx);
 					if (hasTheUnUnusedValue != null) {
 						return hasTheUnUnusedValue;
 					} else {
@@ -485,45 +466,40 @@ public class UnusedDefinitionsRemover extends
 	public Boolean visit(VariableDeclarator n, Iterator<? extends Node> it) {
 		boolean removed = false;
 		List<SymbolReference> usages = n.getUsages();
-		if (siblingsVisitor.getRemoveUnusedVariables() && usages == null
-				|| usages.isEmpty()) {
+		if (siblingsVisitor.getRemoveUnusedVariables() && usages == null || usages.isEmpty()) {
 			Node parent = n.getParentNode();
 			boolean belongsToSerializable = false;
 			Boolean containsSupressWarnings = false;
 			if (parent instanceof FieldDeclaration) {
-				belongsToSerializable = belongsToClass(
-						(FieldDeclaration) parent, Serializable.class);
+				belongsToSerializable = belongsToClass((FieldDeclaration) parent, Serializable.class);
 			}
 			HasSupressWarning warning = new HasSupressWarning();
 			containsSupressWarnings = n.accept(warning, null);
 			if (containsSupressWarnings == null) {
 				containsSupressWarnings = false;
 			}
-			boolean canBeRemoved = !(belongsToSerializable && n.getId()
-					.getName().equals("serialVersionUID"));
-			
-			if (parent != null && canBeRemoved){
+			boolean canBeRemoved = !(belongsToSerializable && n.getId().getName().equals("serialVersionUID"));
+
+			if (parent != null && canBeRemoved) {
 				Node grandParent = parent.getParentNode();
-				if (grandParent instanceof ForeachStmt){
+				if (grandParent instanceof ForeachStmt) {
 					ForeachStmt foreach = (ForeachStmt) grandParent;
 					canBeRemoved = !(foreach.getVariable() == parent);
-				}
-				else if(grandParent instanceof ForStmt){
+				} else if (grandParent instanceof ForStmt) {
 					ForStmt forStmt = (ForStmt) grandParent;
 					List<Expression> initExprs = forStmt.getInit();
-					if (initExprs != null){
-						for(Expression init: initExprs){
+					if (initExprs != null) {
+						for (Expression init : initExprs) {
 							canBeRemoved = canBeRemoved && (init != parent);
 						}
 					}
-				}
-				else if(grandParent instanceof TryStmt){
+				} else if (grandParent instanceof TryStmt) {
 					TryStmt tryStmt = (TryStmt) grandParent;
 					List<VariableDeclarationExpr> vars = tryStmt.getResources();
 					canBeRemoved = !(vars.contains(parent));
 				}
 			}
-			
+
 			if (canBeRemoved && n.getInit() != null) {
 				Set<Node> ctx = new HashSet<Node>();
 				VoidVisitorAdapter<Set<Node>> v = new VoidVisitorAdapter<Set<Node>>() {

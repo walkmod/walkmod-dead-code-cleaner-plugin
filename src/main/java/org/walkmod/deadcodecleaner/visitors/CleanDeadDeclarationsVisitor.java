@@ -15,9 +15,12 @@ You should have received a copy of the GNU Lesser General Public License
 along with Walkmod.  If not, see <http://www.gnu.org/licenses/>.*/
 package org.walkmod.deadcodecleaner.visitors;
 
+import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.walkmod.javalang.ast.CompilationUnit;
 import org.walkmod.javalang.ast.ImportDeclaration;
@@ -41,7 +44,12 @@ import org.walkmod.javalang.ast.stmt.TypeDeclarationStmt;
 import org.walkmod.javalang.ast.type.ClassOrInterfaceType;
 import org.walkmod.javalang.ast.type.Type;
 import org.walkmod.javalang.compiler.symbols.RequiresSemanticAnalysis;
+import org.walkmod.javalang.javadoclinks.JavadocLinkParser;
+import org.walkmod.javalang.javadoclinks.MethodLink;
+import org.walkmod.javalang.javadoclinks.ParseException;
 import org.walkmod.javalang.visitors.VoidVisitorAdapter;
+
+import com.alibaba.fastjson.JSONArray;
 
 @RequiresSemanticAnalysis
 public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
@@ -61,11 +69,12 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 	private Boolean removeUnusedMethods = true;
 
 	private Boolean removeUnusedFields = true;
-	
+
 	private Boolean ignoreSerializableMethods = false;
 
-	private UnusedDefinitionsRemover remover = new UnusedDefinitionsRemover(
-			this);
+	private Map<String, List<MethodLink>> excludedMethods = new HashMap<String, List<MethodLink>>();
+
+	private UnusedDefinitionsRemover remover = new UnusedDefinitionsRemover(this);
 
 	@Override
 	public void visit(CompilationUnit n, T arg) {
@@ -90,6 +99,65 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 			}
 		}
 	}
+	
+	public boolean isExcluded(Method method){
+		if(method != null){
+			List<MethodLink> candidates = excludedMethods.get(method.getName());
+			if(candidates != null){
+				Iterator<MethodLink> it = candidates.iterator();
+				boolean selected = false;
+				while(it.hasNext() && !selected){
+					MethodLink next = it.next();
+					String className = next.getClassName();
+					Class<?> clazz = method.getDeclaringClass();
+					while(clazz != null && clazz.isAnonymousClass()){
+						clazz = clazz.getSuperclass();
+					}
+					selected = !"".equals(className) && clazz != null && clazz.getName().equals(className);
+					if(selected){
+						Class<?>[] params = method.getParameterTypes();
+						List<String> args = next.getArguments();
+						if(params.length == args.size()){
+							Iterator<String> itArgs = args.iterator();
+							int i = 0;
+							while(itArgs.hasNext() && selected){
+								String arg = itArgs.next();
+								selected = params[i].getName().equals(arg);
+								i++;
+							}
+						}
+						else{
+							selected = false;
+						}
+					}
+					return selected;
+				}
+				
+			}
+		}
+		return false;
+	}
+
+	public void setExcludedMethods(JSONArray jsonArray) {
+		Iterator<Object> it = jsonArray.iterator();
+		while (it.hasNext()) {
+			String methodRef = it.next().toString();
+
+			try {
+				MethodLink ml = JavadocLinkParser.parse(methodRef);
+				List<MethodLink> methods = excludedMethods.get(ml.getName());
+				if(methods == null){
+					methods = new LinkedList<MethodLink>();
+				}
+				methods.add(ml);
+				excludedMethods.put(ml.getName(), methods);
+
+			} catch (ParseException e) {
+				throw new RuntimeException("Error parsing " + methodRef, e);
+			}
+
+		}
+	}
 
 	public void visit(AnnotationDeclaration n, T arg) {
 		analyzeTypeDeclaration(n, arg);
@@ -110,8 +178,7 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 			if (stmt instanceof BlockStmt) {
 
 				BlockStmt block = (BlockStmt) stmt;
-				List<Statement> list = new LinkedList<Statement>(
-						block.getStmts());
+				List<Statement> list = new LinkedList<Statement>(block.getStmts());
 				Iterator<Statement> it2 = list.iterator();
 				while (it2.hasNext()) {
 					if (it2.next() == n) {
@@ -169,8 +236,7 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 				if (parent instanceof TypeDeclaration) {
 					list = ((TypeDeclaration) parent).getMembers();
 				} else if (parent instanceof ObjectCreationExpr) {
-					list = ((ObjectCreationExpr) parent)
-							.getAnonymousClassBody();
+					list = ((ObjectCreationExpr) parent).getAnonymousClassBody();
 				} else if (parent instanceof EnumConstantDeclaration) {
 					list = ((EnumConstantDeclaration) parent).getClassBody();
 				}
@@ -211,8 +277,7 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 						if (stmt instanceof BlockStmt) {
 
 							BlockStmt block = (BlockStmt) stmt;
-							List<Statement> list = new LinkedList<Statement>(
-									block.getStmts());
+							List<Statement> list = new LinkedList<Statement>(block.getStmts());
 							Iterator<Statement> it2 = list.iterator();
 							boolean removed = false;
 							while (it2.hasNext()) {
@@ -316,8 +381,7 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 		return removeUnusedAnnotationTypes;
 	}
 
-	public void setRemoveUnusedAnnotationTypes(
-			Boolean removeUnusedAnnotationTypes) {
+	public void setRemoveUnusedAnnotationTypes(Boolean removeUnusedAnnotationTypes) {
 		this.removeUnusedAnnotationTypes = removeUnusedAnnotationTypes;
 	}
 
@@ -336,7 +400,7 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 	public void setRemoveUnusedFields(Boolean removeUnusedFields) {
 		this.removeUnusedFields = removeUnusedFields;
 	}
-	
+
 	public Boolean getIgnoreSerializableMethods() {
 		return ignoreSerializableMethods;
 	}
