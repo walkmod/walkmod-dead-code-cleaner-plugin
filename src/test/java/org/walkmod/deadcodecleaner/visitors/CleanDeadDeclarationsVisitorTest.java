@@ -435,5 +435,18 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		cu.accept(visitor, null);
 		Assert.assertEquals(1, cu.getTypes().get(0).getMembers().size());
 	}
+	
+	@Test
+	public void testExcludedFields() throws Exception{
+		String code = "public class Foo{ private String name; }";
+		CompilationUnit cu = compile(code);
+		CleanDeadDeclarationsVisitor<?> visitor = new CleanDeadDeclarationsVisitor<Object>();
+		List<Object> content = new LinkedList<Object>();
+		content.add("Foo#name");
+		JSONArray array = new JSONArray(content);
+		visitor.setExcludedFields(array);
+		cu.accept(visitor, null);
+		Assert.assertEquals(1, cu.getTypes().get(0).getMembers().size());
+	}
 
 }

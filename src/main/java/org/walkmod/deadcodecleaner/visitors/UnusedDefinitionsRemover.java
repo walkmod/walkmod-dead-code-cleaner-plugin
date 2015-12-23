@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import org.walkmod.javalang.ast.FieldSymbolData;
 import org.walkmod.javalang.ast.ImportDeclaration;
 import org.walkmod.javalang.ast.MethodSymbolData;
 import org.walkmod.javalang.ast.Node;
@@ -249,12 +250,23 @@ public class UnusedDefinitionsRemover extends GenericVisitorAdapter<Boolean, Ite
 				}
 				boolean canBeRemoved = !(belongsToSerializable && hasSerialVersionUID) && hasRemovableVars;
 				if (canBeRemoved && !containsSupressWarnings) {
-					it.remove();
-					removeOrphanBodyReferences(n);
-					removed = true;
-					Type sr = n.getType();
-					if (sr != null) {
-						sr.accept(siblingsVisitor.getTypeUpdater(), null);
+					boolean remove = true;
+					List<FieldSymbolData> listfsd = n.getFieldsSymbolData();
+					if (listfsd != null) {
+						Iterator<FieldSymbolData> itfsd = listfsd.iterator();
+						while(itfsd.hasNext() && remove){
+							FieldSymbolData fsd = itfsd.next();
+							remove = !siblingsVisitor.isExcluded(fsd.getField());
+						}
+					}
+					if (remove) {
+						it.remove();
+						removeOrphanBodyReferences(n);
+						removed = true;
+						Type sr = n.getType();
+						if (sr != null) {
+							sr.accept(siblingsVisitor.getTypeUpdater(), null);
+						}
 					}
 				} else {
 					n.accept(siblingsVisitor, null);

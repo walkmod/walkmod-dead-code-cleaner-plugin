@@ -15,6 +15,7 @@ You should have received a copy of the GNU Lesser General Public License
 along with Walkmod.  If not, see <http://www.gnu.org/licenses/>.*/
 package org.walkmod.deadcodecleaner.visitors;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -44,6 +45,7 @@ import org.walkmod.javalang.ast.stmt.TypeDeclarationStmt;
 import org.walkmod.javalang.ast.type.ClassOrInterfaceType;
 import org.walkmod.javalang.ast.type.Type;
 import org.walkmod.javalang.compiler.symbols.RequiresSemanticAnalysis;
+import org.walkmod.javalang.javadoclinks.FieldLink;
 import org.walkmod.javalang.javadoclinks.JavadocLinkParser;
 import org.walkmod.javalang.javadoclinks.MethodLink;
 import org.walkmod.javalang.javadoclinks.ParseException;
@@ -74,6 +76,8 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 
 	private Map<String, List<MethodLink>> excludedMethods = new HashMap<String, List<MethodLink>>();
 
+	private Map<String, List<FieldLink>> excludedFields = new HashMap<String, List<FieldLink>>();
+
 	private UnusedDefinitionsRemover remover = new UnusedDefinitionsRemover(this);
 
 	@Override
@@ -99,42 +103,65 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 			}
 		}
 	}
-	
-	public boolean isExcluded(Method method){
-		if(method != null){
+
+	public boolean isExcluded(Method method) {
+		if (method != null) {
 			List<MethodLink> candidates = excludedMethods.get(method.getName());
-			if(candidates != null){
+			if (candidates != null) {
 				Iterator<MethodLink> it = candidates.iterator();
 				boolean selected = false;
-				while(it.hasNext() && !selected){
+				while (it.hasNext() && !selected) {
 					MethodLink next = it.next();
 					String className = next.getClassName();
 					Class<?> clazz = method.getDeclaringClass();
-					while(clazz != null && clazz.isAnonymousClass()){
+					while (clazz != null && clazz.isAnonymousClass()) {
 						clazz = clazz.getSuperclass();
 					}
 					selected = !"".equals(className) && clazz != null && clazz.getName().equals(className);
-					if(selected){
+					if (selected) {
 						Class<?>[] params = method.getParameterTypes();
 						List<String> args = next.getArguments();
-						if(params.length == args.size()){
+						if (params.length == args.size()) {
 							Iterator<String> itArgs = args.iterator();
 							int i = 0;
-							while(itArgs.hasNext() && selected){
+							while (itArgs.hasNext() && selected) {
 								String arg = itArgs.next();
 								selected = params[i].getName().equals(arg);
 								i++;
 							}
-						}
-						else{
+						} else {
 							selected = false;
 						}
 					}
 					return selected;
 				}
-				
+
 			}
 		}
+		return false;
+	}
+
+	public boolean isExcluded(Field field) {
+		if (field != null) {
+			List<FieldLink> candidates = excludedFields.get(field.getName());
+			if (candidates != null) {
+				Iterator<FieldLink> it = candidates.iterator();
+				boolean selected = false;
+
+				while (it.hasNext() && !selected) {
+					FieldLink next = it.next();
+					String className = next.getClassName();
+					Class<?> clazz = field.getDeclaringClass();
+
+					while (clazz != null && clazz.isAnonymousClass()) {
+						clazz = clazz.getSuperclass();
+					}
+					selected = !"".equals(className) && clazz != null && clazz.getName().equals(className);
+				}
+				return selected;
+			}
+		}
+
 		return false;
 	}
 
@@ -146,7 +173,7 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 			try {
 				MethodLink ml = JavadocLinkParser.parse(methodRef);
 				List<MethodLink> methods = excludedMethods.get(ml.getName());
-				if(methods == null){
+				if (methods == null) {
 					methods = new LinkedList<MethodLink>();
 				}
 				methods.add(ml);
@@ -156,6 +183,25 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
 				throw new RuntimeException("Error parsing " + methodRef, e);
 			}
 
+		}
+	}
+
+	public void setExcludedFields(JSONArray jsonArray) {
+		Iterator<Object> it = jsonArray.iterator();
+		while (it.hasNext()) {
+			String fieldRef = it.next().toString();
+			try {
+				FieldLink fl = JavadocLinkParser.parseField(fieldRef);
+
+				List<FieldLink> fields = excludedFields.get(fl.getName());
+				if (fields == null) {
+					fields = new LinkedList<FieldLink>();
+				}
+				fields.add(fl);
+				excludedFields.put(fl.getName(), fields);
+			} catch (ParseException e) {
+				throw new RuntimeException("Error parsing " + fieldRef, e);
+			}
 		}
 	}
 
