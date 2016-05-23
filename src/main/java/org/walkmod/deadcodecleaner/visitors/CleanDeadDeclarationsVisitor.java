@@ -44,6 +44,7 @@ import org.walkmod.javalang.ast.expr.ObjectCreationExpr;
 import org.walkmod.javalang.ast.expr.VariableDeclarationExpr;
 import org.walkmod.javalang.ast.stmt.BlockStmt;
 import org.walkmod.javalang.ast.stmt.EmptyStmt;
+import org.walkmod.javalang.ast.stmt.ForStmt;
 import org.walkmod.javalang.ast.stmt.IfStmt;
 import org.walkmod.javalang.ast.stmt.Statement;
 import org.walkmod.javalang.ast.stmt.TypeDeclarationStmt;
@@ -312,9 +313,34 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
    }
 
    private boolean isEmptyBlock(Statement stmt) {
-      return  stmt == null || (stmt instanceof EmptyStmt || ((stmt instanceof BlockStmt) && (((BlockStmt) stmt).getStmts() == null)
-            || ((BlockStmt) stmt).getStmts().isEmpty()));
+      return stmt == null
+            || (stmt instanceof EmptyStmt || ((stmt instanceof BlockStmt) && (((BlockStmt) stmt).getStmts() == null)
+                  || ((BlockStmt) stmt).getStmts().isEmpty()));
    }
+
+   class ConditionCanBeRemoved extends VoidVisitorAdapter<T> {
+
+      boolean canBeRemoved = true;
+
+      @Override
+      public void visit(MethodCallExpr n, T arg) {
+         super.visit(n, arg);
+         canBeRemoved = false;
+      }
+
+      @Override
+      public void visit(LambdaExpr n, T arg) {
+         super.visit(n, arg);
+         canBeRemoved = false;
+      }
+
+      @Override
+      public void visit(ObjectCreationExpr n, T arg) {
+         super.visit(n, arg);
+         canBeRemoved = false;
+      }
+   }
+   
 
    @Override
    public void visit(IfStmt n, T arg) {
@@ -323,28 +349,7 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
          Statement elseStmt = n.getElseStmt();
          if (isEmptyBlock(elseStmt)) {
             Expression condition = n.getCondition();
-            class ConditionCanBeRemoved extends VoidVisitorAdapter<T> {
 
-               boolean canBeRemoved = true;
-
-               @Override
-               public void visit(MethodCallExpr n, T arg) {
-                  super.visit(n, arg);
-                  canBeRemoved = false;
-               }
-
-               @Override
-               public void visit(LambdaExpr n, T arg) {
-                  super.visit(n, arg);
-                  canBeRemoved = false;
-               }
-
-               @Override
-               public void visit(ObjectCreationExpr n, T arg) {
-                  super.visit(n, arg);
-                  canBeRemoved = false;
-               }
-            }
             ConditionCanBeRemoved visitor = new ConditionCanBeRemoved();
             condition.accept(visitor, arg);
             if (visitor.canBeRemoved) {

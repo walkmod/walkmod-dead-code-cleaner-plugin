@@ -129,6 +129,7 @@ public class UnusedDefinitionsRemover extends GenericVisitorAdapter<Boolean, Ite
 	
 	@Override
    public Boolean visit(ConstructorDeclaration n, Iterator<? extends Node> it) {
+	   n.accept(siblingsVisitor, null);
 	   return false;
    }
 
