@@ -456,5 +456,24 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		cu.accept(visitor, null);
 		Assert.assertEquals(1, cu.getTypes().get(0).getMembers().size());
 	}
+	
+	@Test
+	public void testRemoveEmptyIf() throws Exception{
+	   String code = "public class Foo{ public void x(){ if (1 == 1); }}";
+	   CompilationUnit cu = compile(code);
+	   CleanDeadDeclarationsVisitor<?> visitor = new CleanDeadDeclarationsVisitor<Object>();
+	   cu.accept(visitor, null);
+	   MethodDeclaration md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(0);
+	   Assert.assertTrue(md.getBody().getStmts().isEmpty());
+	}
 
+	@Test
+   public void testRemoveEmptyIf2() throws Exception{
+      String code = "public class Foo{ public void x(){ if (1 == 1){} }}";
+      CompilationUnit cu = compile(code);
+      CleanDeadDeclarationsVisitor<?> visitor = new CleanDeadDeclarationsVisitor<Object>();
+      cu.accept(visitor, null);
+      MethodDeclaration md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(0);
+      Assert.assertTrue(md.getBody().getStmts().isEmpty());
+   }
 }
