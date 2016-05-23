@@ -35,6 +35,7 @@ import org.walkmod.javalang.ast.SymbolReference;
 import org.walkmod.javalang.ast.body.AnnotationDeclaration;
 import org.walkmod.javalang.ast.body.BodyDeclaration;
 import org.walkmod.javalang.ast.body.ClassOrInterfaceDeclaration;
+import org.walkmod.javalang.ast.body.ConstructorDeclaration;
 import org.walkmod.javalang.ast.body.EmptyTypeDeclaration;
 import org.walkmod.javalang.ast.body.EnumDeclaration;
 import org.walkmod.javalang.ast.body.FieldDeclaration;
@@ -125,6 +126,11 @@ public class UnusedDefinitionsRemover extends GenericVisitorAdapter<Boolean, Ite
 	public Boolean visit(EmptyTypeDeclaration n, Iterator<? extends Node> it) {
 		return false;
 	}
+	
+	@Override
+   public Boolean visit(ConstructorDeclaration n, Iterator<? extends Node> it) {
+	   return false;
+   }
 
 	public Boolean visit(MethodDeclaration n, Iterator<? extends Node> it) {
 		boolean removed = false;
@@ -416,6 +422,20 @@ public class UnusedDefinitionsRemover extends GenericVisitorAdapter<Boolean, Ite
 			}
 			return containsSupressWarnings;
 		}
+		
+		@Override
+      public Boolean visit(ConstructorDeclaration n, Object ctx) {
+         boolean containsSupressWarnings = false;
+         List<AnnotationExpr> ann = n.getAnnotations();
+         if (ann != null) {
+            Iterator<AnnotationExpr> itAnnotations = ann.iterator();
+            while (itAnnotations.hasNext() && !containsSupressWarnings) {
+               AnnotationExpr annotation = itAnnotations.next();
+               containsSupressWarnings = annotation.accept(this, null);
+            }
+         }
+         return containsSupressWarnings;
+      }
 
 		@Override
 		public Boolean visit(ClassOrInterfaceDeclaration n, Object ctx) {

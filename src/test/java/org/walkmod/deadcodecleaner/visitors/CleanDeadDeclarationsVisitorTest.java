@@ -85,6 +85,14 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 		cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
 		Assert.assertEquals(2, cu.getTypes().get(0).getMembers().size());
 	}
+	
+	@Test
+   public void testRemoveUnusedMethods5() throws Exception {
+      CompilationUnit cu = compile(
+            "import java.util.Map; public class Foo { private Map checkHas; private void bar(String s){ checkHas = null;} public String getName(String x) { bar(x); return \"name\";}}");
+      cu.accept(new CleanDeadDeclarationsVisitor<Object>(), null);
+      Assert.assertEquals(3, cu.getTypes().get(0).getMembers().size());
+   }
 
 	@Test
 	public void testRemoveRecursiveMethods() throws Exception {
