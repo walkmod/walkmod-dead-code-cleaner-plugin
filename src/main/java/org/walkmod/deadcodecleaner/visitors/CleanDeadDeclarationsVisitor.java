@@ -315,7 +315,7 @@ public class CleanDeadDeclarationsVisitor<T> extends VoidVisitorAdapter<T> {
    private boolean isEmptyBlock(Statement stmt) {
       return stmt == null
             || (stmt instanceof EmptyStmt || ((stmt instanceof BlockStmt) && (((BlockStmt) stmt).getStmts() == null)
-                  || ((BlockStmt) stmt).getStmts().isEmpty()));
+                  || ((stmt instanceof BlockStmt)  && ((BlockStmt) stmt).getStmts().isEmpty())));
    }
 
    class ConditionCanBeRemoved extends VoidVisitorAdapter<T> {
