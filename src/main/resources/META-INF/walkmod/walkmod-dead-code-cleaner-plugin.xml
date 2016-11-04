@@ -4,7 +4,7 @@
 
 <beans>
 	<bean id="org.walkmod:walkmod-dead-code-cleaner-plugin:unused-declarations-cleaner"
-		class="org.walkmod.deadcodecleaner.visitors.CleanDeadDeclarationsVisitor"></bean>
+		class="org.walkmod.deadcodecleaner.visitors.CleanDeadDeclarationsVisitor" singleton="false"></bean>
 
 	<alias name="org.walkmod:walkmod-dead-code-cleaner-plugin:unused-declarations-cleaner"
 		alias="walkmod:commons:unused-declarations-cleaner" />

@@ -476,4 +476,15 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
       MethodDeclaration md = (MethodDeclaration)cu.getTypes().get(0).getMembers().get(0);
       Assert.assertTrue(md.getBody().getStmts().isEmpty());
    }
+	
+	@Test
+	public void testRemoveConditions() throws Exception {
+	   String code = "import java.io.File; public class Foo{ public void x(){ File x; }}";
+	   CompilationUnit cu = compile(code);
+      CleanDeadDeclarationsVisitor<?> visitor = new CleanDeadDeclarationsVisitor<Object>();
+      visitor.setRemoveUnusedImports(false);
+      cu.accept(visitor, null);
+      Assert.assertFalse(cu.getImports().isEmpty());
+	   
+	}
 }

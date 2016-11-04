@@ -291,7 +291,7 @@ public class UnusedDefinitionsRemover extends GenericVisitorAdapter<Boolean, Ite
 	public Boolean visit(ImportDeclaration n, Iterator<? extends Node> it) {
 		boolean removed = false;
 		List<SymbolReference> usages = n.getUsages();
-		if (siblingsVisitor.getRemoveUnusedImports() && usages == null || usages.isEmpty()) {
+		if (siblingsVisitor.getRemoveUnusedImports() && (usages == null || usages.isEmpty())) {
 			it.remove();
 			removed = true;
 		} else {
