@@ -487,4 +487,38 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
       Assert.assertFalse(cu.getImports().isEmpty());
 	   
 	}
+
+	@Test
+	public void testDontRemoveImportsUsedByLambdas() throws Exception {
+		String externalClass = "package blah;" +
+				"import java.util.function.Supplier;" +
+				"public class MyClassThatNeedsToBeImported {" +
+				"public static <T> Supplier<T> memoize(Supplier<T> delegate) {" +
+				"return null;" + //Implementation not relevant to testcase
+				"}" +
+				"}";
+		String code = "package example;" +
+				"import blah.MyClassThatNeedsToBeImported;" +
+				"import java.util.function.Supplier;" +
+				"class MyClass {" +
+				"Supplier o;" +
+				"public MyClass() {" +
+				" this.o = MyClassThatNeedsToBeImported.memoize(this::load)::get;" +
+
+				"load();" +
+
+				"}" +
+				"private Object load() {" +
+				"return null;"+ //Implementation not relevant to testcase
+				"}}";
+
+		CompilationUnit cu = compile(code, externalClass);
+		String codeBefore = cu.toString();
+
+		CleanDeadDeclarationsVisitor<?> visitor = new CleanDeadDeclarationsVisitor<Object>();
+		cu.accept(visitor, null);
+		String codeAfter = cu.toString();
+
+		Assert.assertEquals(codeBefore, codeAfter);
+	}
 }
