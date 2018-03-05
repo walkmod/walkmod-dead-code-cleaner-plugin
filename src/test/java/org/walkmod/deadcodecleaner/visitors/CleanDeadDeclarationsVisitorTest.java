@@ -552,4 +552,33 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 
 		Assert.assertEquals(codeBefore, codeAfter);
 	}
+
+	@Test
+	public void testDontRemoveImportsUsedByLambdasExample3() throws Exception {
+		String code = "package example;" +
+"import java.util.function.Supplier;" +
+		"public class ExampleDefaultTemplateManager {" +
+			"public ExampleDefaultTemplateManager() {" +
+				"ContextFreeReference<Object> holderRef = new ContextFreeReference<>(this::initTemplates);" +
+			"}" +
+			"private Object initTemplates() {" +
+				"return null;" +
+			"}" +
+			"public class ContextFreeReference<T> implements Supplier<T> {" +
+				"public ContextFreeReference(Supplier<T> supplier) {" +
+				"}" +
+				"public T get() {" +
+					"return null;" +
+				"}" +
+			"}" +
+		"}";
+		CompilationUnit cu = compile(code);
+		String codeBefore = cu.toString();
+
+		CleanDeadDeclarationsVisitor<?> visitor = new CleanDeadDeclarationsVisitor<Object>();
+		cu.accept(visitor, null);
+		String codeAfter = cu.toString();
+
+		Assert.assertEquals(codeBefore, codeAfter);
+	}
 }
