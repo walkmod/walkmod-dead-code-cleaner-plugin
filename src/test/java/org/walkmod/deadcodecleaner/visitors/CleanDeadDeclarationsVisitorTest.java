@@ -521,4 +521,35 @@ public class CleanDeadDeclarationsVisitorTest extends SemanticTest {
 
 		Assert.assertEquals(codeBefore, codeAfter);
 	}
+
+	@Test
+	public void testDontRemoveImportsUsedByLambdasExample2() throws Exception {
+		String code = "package example;" +
+"import java.util.Collection;" +
+"import java.util.Objects;" +
+"import static java.util.stream.Collectors.toSet;" +
+"		public class ExampleGroupPickerSearcher {" +
+"			public ExampleGroupPickerSearcher() {" +
+"				final Resolver<String> nameResolver = rawValues ->" +
+"						rawValues.stream()" +
+"								.map(this::convertToIndexValue)" +
+"								.filter(Objects::nonNull)" +
+"								.collect(toSet());" +
+"			}" +
+"			public String convertToIndexValue(final Object rawValue) {" +
+"				return \"\";" +
+"			}" +
+"			public interface Resolver<T> {" +
+"				Collection<T> resolveNames(Collection<Object> rawValues);" +
+"			}" +
+"		}";
+		CompilationUnit cu = compile(code);
+		String codeBefore = cu.toString();
+
+		CleanDeadDeclarationsVisitor<?> visitor = new CleanDeadDeclarationsVisitor<Object>();
+		cu.accept(visitor, null);
+		String codeAfter = cu.toString();
+
+		Assert.assertEquals(codeBefore, codeAfter);
+	}
 }
